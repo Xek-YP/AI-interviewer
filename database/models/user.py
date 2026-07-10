@@ -20,7 +20,7 @@ class User(Base):
         nullable=False
     )
     username: Mapped[None | str] = mapped_column(
-        String(30),
+        String(32),
         nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
