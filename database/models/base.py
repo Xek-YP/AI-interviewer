@@ -7,4 +7,4 @@ class Base(DeclarativeBase):
     """Базовый класс для всех моделей."""
     @declared_attr
     def __tablename__(cls) -> str:
-        return cls.__name__.lower()
+        return f'{cls.__name__.lower()}s'
