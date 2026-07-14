@@ -1,12 +1,10 @@
-from datetime import datetime, timezone
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.user import User
 
 class UserRepository:
-    async def get_user_by_telegram_id(
+    async def get_by_telegram_id(
         self,
         telegram_id: int,
         session: AsyncSession
@@ -21,26 +19,11 @@ class UserRepository:
         session: AsyncSession,
         telegram_id: int,
         username: str | None,
+        first_name: str
     ) -> User:
         """Функция добавления новых пользователей в БД."""
-        user = User(telegram_id=telegram_id, username=username)
+        user = User(telegram_id=telegram_id, username=username, first_name=first_name)
         session.add(user)
-        await session.commit()
-        await session.refresh(user)
         return user
 
-    async def update_last_activity(
-        self,
-        session: AsyncSession,
-        telegram_id: int
-    ) -> None:
-        """Функция обновляющая последнюю активность пользователя."""
-        user = await self.get_user_by_telegram_id(
-            telegram_id=telegram_id,
-            session=session
-        )
-        if user:
-            user.last_activity_at = datetime.now(timezone.utc)
-            await session.commit()
-        else:
-            raise ValueError('Пользователь с таким id отсутствует.')
+user_repository = UserRepository()
