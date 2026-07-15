@@ -1,0 +1,1 @@
+WELCOME_MESSAGE = 'Привет, {first_name}!'
