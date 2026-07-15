@@ -9,10 +9,10 @@ router = Router()
 
 @router.message(CommandStart())
 async def start_handler(message: Message):
+    if message.from_user is None:
+        return
     async with AsyncSessionLocal() as async_session:
         user_service = UserService()
-        if message.from_user is None:
-            return
         user = await user_service.register_user(
             session=async_session,
             telegram_id=message.from_user.id,
