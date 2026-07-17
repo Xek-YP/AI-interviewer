@@ -38,10 +38,6 @@ class Interview(Base):
     )
     score: Mapped[int | None] = mapped_column(
         Integer,
-        CheckConstraint(
-            'score >= 0 and score <=100',
-            name='ck_score_from_0_to_100'
-        ),
         nullable=True
     )
     max_questions: Mapped[int] = mapped_column(
@@ -56,9 +52,17 @@ class Interview(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
+        server_default=func.now(),
         onupdate=func.now(),
     )
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+
+    __table_args__ = (
+        CheckConstraint(
+            'score >= 0 and score <=100',
+            name='ck_score_from_0_to_100'
+        ),
     )
