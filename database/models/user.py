@@ -1,14 +1,19 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import BIGINT, DateTime, Integer, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from database.models.base import Base
 
+if TYPE_CHECKING:
+    from database.models import Interview
 
 class User(Base):
     """Модель пользователя."""
+    __tablename__ = 'users'
+
     id: Mapped[int] = mapped_column(
         Integer,
         primary_key=True,
@@ -36,4 +41,7 @@ class User(Base):
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
+    )
+    interviews: Mapped[list['Interview']] = relationship(
+        'Interview', back_populates='user'
     )

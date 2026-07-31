@@ -1,19 +1,24 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint, DateTime,
     Enum, ForeignKey,
     Integer, SmallInteger
 )
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from database.models.base import Base
 from database.enums import Difficulty, InterviewStatus
 
 
+if TYPE_CHECKING:
+    from database.models import User, InterviewQuestion
+
 class Interview(Base):
     """Модель собеседования."""
+    __tablename__ = 'interviews'
 
     id: Mapped[int] = mapped_column(
         Integer,
@@ -58,6 +63,11 @@ class Interview(Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
+    )
+    user: Mapped['User'] = relationship('User', back_populates='interviews')
+    questions: Mapped[list['InterviewQuestion']] = relationship(
+        'InterviewQuestion',
+        back_populates='interview'
     )
 
     __table_args__ = (
