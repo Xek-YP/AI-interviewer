@@ -2,8 +2,8 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.repositories.user_repository import user_repository
-from database.models.user import User
+from database.repositories import user_repository
+from database.models import User
 
 class UserService:
     """Сервис работы с пользователями."""
