@@ -33,6 +33,22 @@ class InterviewRepository:
         result = await session.execute(stmt)
         return result.scalars().first()
 
+    async def get_by_user_id(
+        self,
+        session: AsyncSession,
+        user_id: int
+    ) -> list[Interview]:
+        """
+        Возвращает все законченные и прерванные
+        собеседования по ID пользователя.
+        """
+        stmt = select(Interview).where(
+            Interview.user_id == user_id,
+            Interview.status != InterviewStatus.IN_PROGRESS
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()
+
     async def get_active_by_user_id(
         self,
         session: AsyncSession,

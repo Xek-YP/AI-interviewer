@@ -55,3 +55,15 @@ class InterviewQuestionRepository:
         )
         result = await session.execute(stmt)
         return result.scalars().one_or_none()
+
+    async def get_all_by_interview_id(
+        self,
+        session: AsyncSession,
+        interview_id: int,
+    ) -> list[InterviewQuestion]:
+        """Возвращает все вопросы конкретного собеседования."""
+        stmt = select(InterviewQuestion).where(
+            InterviewQuestion.interview_id == interview_id
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()
