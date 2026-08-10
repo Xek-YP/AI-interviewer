@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.models.question_category import QuestionCategory
@@ -62,6 +62,17 @@ class QuestionCategoryRepository:
         )
         result = await session.execute(stmt)
         return result.scalars().all()
+
+    async def get_random_category(
+        self,
+        session: AsyncSession,
+    ) -> QuestionCategory | None:
+        """Возвращает случайную активную категорию."""
+        stmt = select(QuestionCategory).where(
+            QuestionCategory.is_active.is_(True)
+        ).order_by(func.random()).limit(1)
+        result = await session.execute(stmt)
+        return result.scalars().first()
 
     async def update(
         self,
