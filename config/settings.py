@@ -6,6 +6,9 @@ class Settings(BaseSettings):
     """Настройки приложения."""
 
     telegram_bot_token: str
+
+    gemini_api_key: SecretStr
+
     postgres_user: str
     postgres_password: SecretStr
     postgres_db: str

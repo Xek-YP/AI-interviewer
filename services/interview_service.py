@@ -58,4 +58,3 @@ class InterviewService:
         )
         await session.commit()
         return question
-
