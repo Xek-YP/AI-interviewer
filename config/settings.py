@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     telegram_bot_token: str
 
     gemini_api_key: SecretStr
+    deepseek_api_key: SecretStr
 
     postgres_user: str
     postgres_password: SecretStr
