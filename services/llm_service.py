@@ -1,6 +1,12 @@
-from freeflow_llm import FreeFlowClient
+import asyncio
 
-from constants.interview import QUESTION_PROMPT
+from openai import AsyncOpenAI
+
+from constants.interview import (
+    QUESTION_PROMPT, DEEPSEEK_BASE_URL,
+    MAX_LLM_ATTEMPTS, LLM_RETRY_DELAY
+)
+from config.settings import Settings
 from database.enums import Difficulty
 
 class LLMService:
@@ -17,16 +23,41 @@ class LLMService:
             category=category
         )
 
-        async with FreeFlowClient() as client:
-            response = await client.async_chat(
-                messages=[
-                    {
-                        'role': 'user',
-                        'content': prompt,
+        client = AsyncOpenAI(
+            api_key=Settings.deepseek_api_key,
+            base_url=DEEPSEEK_BASE_URL,
+        )
+        attempts = 1
+
+        while attempts <= MAX_LLM_ATTEMPTS:
+            try:
+                response = await client.chat.completions.create(
+                    model="deepseek-v4-flash",
+                    messages=[
+                        {
+                            'role': 'system',
+                            'content': 'Ты технический интервьювер с 10 летним стажем. Отвечай только текстом.'
+                        },
+                        {
+                            "role": "user",
+                            "content": prompt,
+                        }
+                    ],
+                    temperature=0.7,
+                    max_tokens=150,
+                    extra_body={
+                        'thinking': {
+                            'type': 'disabled'
+                        }
                     }
-                ],
-                model="gemini-3.6-flash",
-                temperature=0.7,
-                max_tokens=150,
-            )
-        return response.content
+                )
+
+                question = response.choices[0].message.content
+                if not question:
+                    raise
+                attempts += 1
+                await asyncio.sleep(LLM_RETRY_DELAY)
+            except Exception as e:
+                attempts += 1
+                await asyncio.sleep(LLM_RETRY_DELAY)
+        return question
