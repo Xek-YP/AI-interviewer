@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.models.interview_question import UserAnswer
+from database.models import UserAnswer
 from database.enums import Difficulty
 
 
