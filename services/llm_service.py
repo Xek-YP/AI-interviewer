@@ -1,16 +1,37 @@
 import asyncio
 
-from openai import AsyncOpenAI
+from openai import (
+    AsyncOpenAI,
+    APIStatusError,
+    APIConnectionError,
+    APITimeoutError,
+    AuthenticationError,
+    RateLimitError
+)
 
 from constants.interview import (
     QUESTION_PROMPT, DEEPSEEK_BASE_URL,
     MAX_LLM_ATTEMPTS, LLM_RETRY_DELAY
 )
-from config.settings import Settings
+from config.settings import settings
 from database.enums import Difficulty
+from exceptions.llm_exception import (
+    LLMServiceError,
+    LLMAuthenticationError,
+    LLMInsufficientBalanceError,
+    LLMTemporaryError
+)
+
 
 class LLMService:
     """Сервис работы с LLM."""
+    def __init__(self):
+        self.client = AsyncOpenAI(
+            api_key=settings.deepseek_api_key.get_secret_value(),
+            base_url=DEEPSEEK_BASE_URL,
+            max_retries=0,
+        )
+        
     async def generate_question(
         self,
         difficulty: Difficulty,
@@ -23,15 +44,11 @@ class LLMService:
             category=category
         )
 
-        client = AsyncOpenAI(
-            api_key=Settings.deepseek_api_key,
-            base_url=DEEPSEEK_BASE_URL,
-        )
         attempts = 1
 
         while attempts <= MAX_LLM_ATTEMPTS:
             try:
-                response = await client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model="deepseek-v4-flash",
                     messages=[
                         {
@@ -54,10 +71,49 @@ class LLMService:
 
                 question = response.choices[0].message.content
                 if not question:
-                    raise
+                    if attempts == MAX_LLM_ATTEMPTS:
+                        raise LLMTemporaryError('Ответ LLM пуст.')
+                    attempts += 1
+                    await asyncio.sleep(LLM_RETRY_DELAY)
+                    continue
+                return question
+            except AuthenticationError as e:
+                raise LLMAuthenticationError(
+                    'Проблема аутентификации API DeepSeek'
+                ) from e
+            except RateLimitError as e:
+                if attempts == MAX_LLM_ATTEMPTS:
+                    raise LLMTemporaryError('Превышен rate limit LLM.') from e
+                attempts +=1
+                await asyncio.sleep(LLM_RETRY_DELAY)
+            except APIStatusError as e:
+                if e.status_code == 402:
+                    raise LLMInsufficientBalanceError(
+                        'Недостаточно средств на балансе LLM.'
+                    ) from e
+                elif e.status_code >= 500:
+                    if attempts == MAX_LLM_ATTEMPTS:
+                        raise LLMTemporaryError('Ошибка сервера LLM.') from e
+                    attempts += 1
+                    await asyncio.sleep(LLM_RETRY_DELAY)
+                else:
+                    raise LLMServiceError(
+                        f'Ошибка LLM: HTTP {e.status_code}.'
+                    ) from e
+            except APITimeoutError as e:
+                if attempts == MAX_LLM_ATTEMPTS:
+                    raise LLMTemporaryError(
+                        'Превышено время ожидания ответа от LLM.'
+                    ) from e
                 attempts += 1
                 await asyncio.sleep(LLM_RETRY_DELAY)
-            except Exception as e:
+            except APIConnectionError as e:
+                if attempts == MAX_LLM_ATTEMPTS:
+                    raise LLMTemporaryError(
+                        'Не удалось установить соединения с LLM.'
+                    ) from e
                 attempts += 1
                 await asyncio.sleep(LLM_RETRY_DELAY)
-        return question
+
+
+llm_service = LLMService()

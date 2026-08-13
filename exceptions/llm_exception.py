@@ -7,7 +7,7 @@ class LLMTemporaryError(LLMServiceError):
 
 
 class LLMAuthenticationError(LLMServiceError):
-    """Ошибка утентификации в LLM-провайдере."""
+    """Ошибка аутентификации в LLM-провайдере."""
 
 
 class LLMInsufficientBalanceError(LLMServiceError):
