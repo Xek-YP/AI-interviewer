@@ -69,3 +69,5 @@ class InterviewRepository:
     ) -> None:
         """Обновляет данные собеседования в БД."""
         session.add(interview)
+
+interview_repository = InterviewRepository()

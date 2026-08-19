@@ -2,13 +2,11 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.repositories import (
-    interview_repository,
-    interview_question_repository,
-    question_category_repository,
-    user_answer_repository
-)
-from database.models import InterviewQuestion, QuestionCategory
+from database.repositories.interview_repository import interview_repository
+from database.repositories.interview_question_repository import interview_question_repository
+from database.repositories.question_category_repository import question_category_repository
+from database.repositories.user_answer_repository import user_answer_repository
+from database.models import InterviewQuestion, QuestionCategory, UserAnswer
 from database.enums import Difficulty, InterviewStatus
 from exceptions import (
     AlreadyAnsweredError,
@@ -61,28 +59,34 @@ class InterviewService:
             )
             if not question_category:
                 raise NoActiveCategoriesError('Нет активных категорий.')
+
             active_interview = await interview_repository.get_active_by_user_id(
                 session=session,
                 user_id=user_id
             )
+
             if active_interview:
                 active_interview.status = InterviewStatus.INTERRUPTED
                 active_interview.completed_at = datetime.now(timezone.utc)
                 await interview_repository.update(
                     session=session, interview=active_interview
                 )
+
             interview = await interview_repository.create(
                 session=session, user_id=user_id,
                 difficulty=difficulty, max_questions=max_questions
             )
             await session.flush()
+
             question = await self._generate_question(
                 session=session, interview_id=interview.id,
                 question_category=question_category, difficulty=difficulty,
                 order_number=1
             )
             await session.commit()
+
             return question
+
         except Exception:
             await session.rollback()
             raise
@@ -90,19 +94,14 @@ class InterviewService:
     async def submit_answer(
         self,
         session: AsyncSession,
-        interview_question_id: int,
+        telegram_id: int,
         answer_text: str,
-        score: int,
-        strengths: list[str],
-        weaknesses: list[str],
-        recommended_difficulty: Difficulty,
-        confidence: float | None,
-    ) -> InterviewQuestion | None:
+    ) -> tuple[InterviewQuestion | None, UserAnswer]:
         """Сохраняет ответ пользователя и либо возвращает следующий вопрос либо None."""
         try:
-            question = await interview_question_repository.get_by_id(
+            question = await interview_question_repository.get_current_question(
                 session=session,
-                interview_question_id=interview_question_id
+                telegram_id=telegram_id
             )
 
             if not question:
@@ -124,7 +123,7 @@ class InterviewService:
 
             if await user_answer_repository.get_by_question_id(
                 session=session,
-                question_id=interview_question_id
+                question_id=question.id
             ):
                 raise AlreadyAnsweredError(
                     'На данный вопрос уже был получен ответ.'
@@ -136,16 +135,23 @@ class InterviewService:
             if not next_category:
                 raise NoActiveCategoriesError('Нет активных категорий.')
 
-            await user_answer_repository.create(
+            llm_answer = await llm_service.evaluate_answer(
+                question=question.question_text,
+                answer=answer_text,
+                difficulty=question.difficulty,
+                category=question.category.name,
+            )
+
+            user_answer = await user_answer_repository.create(
                 session=session,
-                interview_question_id=interview_question_id,
+                interview_question_id=question.id,
                 recommended_category_id=next_category.id,
                 answer_text=answer_text,
-                score=score,
-                strengths=self._format_evaluation_items(strengths),
-                weaknesses=self._format_evaluation_items(weaknesses),
-                recommended_difficulty=recommended_difficulty,
-                confidence=confidence
+                score=llm_answer.score,
+                strengths=self._format_evaluation_items(llm_answer.strengths),
+                weaknesses=self._format_evaluation_items(llm_answer.weaknesses),
+                recommended_difficulty=llm_answer.recommended_difficulty,
+                confidence=llm_answer.confidence
             )
 
             if question.order_number < interview.max_questions:
@@ -153,19 +159,18 @@ class InterviewService:
                     session=session,
                     interview_id=interview.id,
                     question_category=next_category,
-                    difficulty=recommended_difficulty,
+                    difficulty=llm_answer.recommended_difficulty,
                     order_number=question.order_number + 1
                 )
 
             else:
                 interview.status = InterviewStatus.COMPLETED
                 next_question = None
-
-            llm_answer = ...
+                interview.completed_at = datetime.now(timezone.utc)
 
             await session.commit()
 
-            return next_question
+            return next_question, user_answer
 
         except Exception:
             await session.rollback()

@@ -56,3 +56,5 @@ class UserAnswerRepository:
         )
         result = await session.execute(stmt)
         return result.scalars().first()
+
+user_answer_repository = UserAnswerRepository()
