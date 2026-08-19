@@ -9,3 +9,6 @@ docker-compose exec db psql -U bot_admin_xek -d AI_sobes -c "\dt"
 
 Для запуска бота
 python main.py
+
+для добавления тестовых категорий:
+INSERT INTO question_categories (name, is_active) VALUES ('ООП', True), ('Асинхронность', True), ('Базовые концепции и принципы', True), ('django', True);

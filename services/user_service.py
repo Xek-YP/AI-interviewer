@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database.repositories import user_repository
+from database.repositories.user_repository import user_repository
 from database.models import User
 
 class UserService:
@@ -52,3 +52,5 @@ class UserService:
         if not user:
             raise ValueError('Пользователя с таким telegram_id нет.')
         return user
+
+user_service = UserService()

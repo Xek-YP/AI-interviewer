@@ -81,3 +81,5 @@ class QuestionCategoryRepository:
     ) -> None:
         """Добавляет обновленные данные категории в текущую сессию."""
         session.add(question_category)
+
+question_category_repository = QuestionCategoryRepository()

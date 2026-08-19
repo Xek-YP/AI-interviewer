@@ -31,3 +31,5 @@ class UserRepository:
         stmt = select(User).where(User.telegram_id == telegram_id)
         result = await session.execute(stmt)
         return result.scalars().first()
+
+user_repository = UserRepository()
