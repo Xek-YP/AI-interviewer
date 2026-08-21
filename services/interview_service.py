@@ -15,6 +15,7 @@ from exceptions import (
     InterviewNotFoundOrInterraptedError,
     InterviewIsCompletedError
 )
+from schemas.answer import SubmitAnswerResult
 from .llm_service import llm_service
 
 
@@ -44,6 +45,15 @@ class InterviewService:
     def _format_evaluation_items(self, items: list[str]) -> str:
         """Преобразует списки в строки."""
         return "\n".join(f"• {item}" for item in items)
+
+    def _calculate_interview_score(
+        self,
+        answers: list[UserAnswer],
+    ) -> int:
+        """Расчитывает итоговую оценку за собеседование."""
+        if not answers:
+            return 0
+        return round(sum(answer.score for answer in answers)/len(answers))
 
     async def start_interview(
         self,
@@ -96,7 +106,7 @@ class InterviewService:
         session: AsyncSession,
         telegram_id: int,
         answer_text: str,
-    ) -> tuple[InterviewQuestion | None, UserAnswer]:
+    ) -> SubmitAnswerResult:
         """Сохраняет ответ пользователя и либо возвращает следующий вопрос либо None."""
         try:
             question = await interview_question_repository.get_current_question(
@@ -162,15 +172,27 @@ class InterviewService:
                     difficulty=llm_answer.recommended_difficulty,
                     order_number=question.order_number + 1
                 )
+                interview_score = None
 
             else:
+                await session.flush()
+                answers = await user_answer_repository.get_all_by_interview_id(
+                    session=session,
+                    interview_id=interview.id
+                )
                 interview.status = InterviewStatus.COMPLETED
                 next_question = None
+                interview.score = self._calculate_interview_score(answers)
                 interview.completed_at = datetime.now(timezone.utc)
+                interview_score = interview.score
 
             await session.commit()
 
-            return next_question, user_answer
+            return SubmitAnswerResult(
+                next_question=next_question,
+                user_answer=user_answer,
+                interview_score=interview_score
+            )
 
         except Exception:
             await session.rollback()
