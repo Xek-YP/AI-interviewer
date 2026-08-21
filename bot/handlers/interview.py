@@ -37,17 +37,26 @@ async def submit_answer(message: Message):
         return
 
     async with AsyncSessionLocal() as session:
-        question, answer = await interview_service.submit_answer(
+        result = await interview_service.submit_answer(
             session=session,
             telegram_id=message.from_user.id,
             answer_text=message.text,
         )
-        response_text = (
-                f"📊 Ваша оценка: {answer.score}/100\n\n"
-                f"💪 Сильные стороны:\n{answer.strengths}\n\n"
-                f"📉 Слабые стороны:\n{answer.weaknesses}\n\n"
-                f"🎯 Уверенность: {answer.confidence * 100:.0f}%\n\n"
-                f"Следующий вопрос:\n{question.question_text}"
+        if result.next_question:
+            response_text = (
+                    f"📊 Ваша оценка: {result.user_answer.score}/100\n\n"
+                    f"💪 Сильные стороны:\n{result.user_answer.strengths}\n\n"
+                    f"📉 Слабые стороны:\n{result.user_answer.weaknesses}\n\n"
+                    f"🎯 Уверенность: {result.user_answer.confidence * 100:.0f}%\n\n"
+                    f"Следующий вопрос:\n{result.next_question.question_text}"
+                )
+        else:
+            response_text = (
+                f"📊 Ваша оценка: {result.user_answer.score}/100\n\n"
+                f"💪 Сильные стороны:\n{result.user_answer.strengths}\n\n"
+                f"📉 Слабые стороны:\n{result.user_answer.weaknesses}\n\n"
+                f"🎯 Уверенность: {result.user_answer.confidence * 100:.0f}%\n\n"
+                f"Собеседование завершено. Итоговая оценка: {result.interview_score}"
             )
         await message.answer(
             response_text

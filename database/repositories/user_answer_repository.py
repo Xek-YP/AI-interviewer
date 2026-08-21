@@ -1,7 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
-from database.models import UserAnswer
+from database.models import UserAnswer, InterviewQuestion
 from database.enums import Difficulty
 
 
@@ -44,6 +45,20 @@ class UserAnswerRepository:
         )
         result = await session.execute(stmt)
         return result.scalars().first()
+
+    async def get_all_by_interview_id(
+        self,
+        session: AsyncSession,
+        interview_id: int
+    ) -> list[UserAnswer]:
+        """Возвращает список ответов по id собеседования."""
+        stmt = (
+            select(UserAnswer)
+            .join(InterviewQuestion, UserAnswer.interview_question_id == InterviewQuestion.id)
+            .where(InterviewQuestion.interview_id == interview_id)
+        )
+        result = await session.execute(stmt)
+        return result.scalars().all()
 
     async def get_by_question_id(
         self,
