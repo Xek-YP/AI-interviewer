@@ -6,6 +6,8 @@ from database.models import InterviewQuestion, UserAnswer
 from database.enums import Difficulty
 from database.repositories.user_repository import user_repository
 from database.repositories.interview_repository import interview_repository
+from exceptions.interview_exception import InterviewNotFoundOrInterraptedError
+
 
 class InterviewQuestionRepository:
     """
@@ -103,6 +105,11 @@ class InterviewQuestionRepository:
             session=session,
             user_id=user.id
         )
+
+        if not interview:
+            raise InterviewNotFoundOrInterraptedError(
+                'Не найдено активных собеседований.'
+            )
 
         questions = await self.get_unanswered_by_interview_id(
             session=session,

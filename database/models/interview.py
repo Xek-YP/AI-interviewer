@@ -3,8 +3,9 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     CheckConstraint, DateTime,
-    Enum, ForeignKey,
-    Integer, SmallInteger
+    Enum, ForeignKey, Text,
+    Integer, SmallInteger,
+    String
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
@@ -47,6 +48,14 @@ class Interview(Base):
     )
     max_questions: Mapped[int] = mapped_column(
         SmallInteger,
+        nullable=False
+    )
+    position: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False
+    )
+    requirements: Mapped[str] = mapped_column(
+        Text,
         nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
