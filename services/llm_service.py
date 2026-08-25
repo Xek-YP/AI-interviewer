@@ -25,6 +25,8 @@ from exceptions.llm_exception import (
     LLMTemporaryError
 )
 from schemas.answer import AnswerEvaluation
+from schemas.interview_question import InterviewQuestionPool
+
 
 class LLMService:
     """Сервис работы с LLM."""
@@ -131,23 +133,29 @@ class LLMService:
             'Не удалось получить ответ от LLM после всех попыток.'
         )
 
-    async def generate_question(
+    async def generate_question_pool(
         self,
         difficulty: Difficulty,
-        category: str
-    ) -> str:
-        """Генерирует вопрос для технического собеседовнаия."""
+        position: str,
+        requirements: str,
+        max_questions: int,
+    ) -> InterviewQuestionPool:
+        """Генерирует пул вопрос для технического собеседования."""
 
         prompt = QUESTION_PROMPT.format(
             difficulty=difficulty.value,
-            category=category
+            position=position,
+            requirements=requirements,
+            max_questions=max_questions
         )
 
         messages = [
             {
                 'role': 'system',
-                'content': ('Ты технический интервьювер с 10-летним стажем. '
-                'Отвечай только текстом.'
+                'content': (
+                    "Ты составляешь пул вопросов для технического собеседования. "
+                    "Формулируй вопросы как опытный технический интервьюер. "
+                    "Не давай ответы на вопросы."
                 ),
             },
             {
@@ -155,11 +163,29 @@ class LLMService:
                 'content': prompt,
             },
         ]
-        return await self._request_llm(
+        response = await self._request_llm(
             messages=messages,
             temperature=0.7,
-            max_tokens=150,
+            max_tokens=2000,
+            response_format={'type': 'json_object'},
         )
+        try:
+            data = json.loads(response)
+            pool = InterviewQuestionPool.model_validate(data)
+        except json.JSONDecodeError as e:
+            raise LLMServiceError(
+                'LLM вернула JSON, не соответствующего схеме пула вопросов'
+            ) from e
+        except ValidationError as e:
+            raise LLMServiceError(
+                'LLM вернула JSON, не соответствующего схеме пула вопросов'
+            ) from e
+        if 5 > len(pool.questions) > max_questions:
+            raise LLMServiceError(
+                'LLM сгенерировала больше вопросов, чем разрешено.'
+            )
+
+        return pool
 
     async def evaluate_answer(
         self,

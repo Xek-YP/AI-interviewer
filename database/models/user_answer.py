@@ -31,12 +31,6 @@ class UserAnswer(Base):
         name='fk_user_answers_interview_question_id_interview_questions',
         nullable=False,
     )
-    recommended_category_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey('question_categories.id'),
-        name='fk_user_answers_recommended_category_id_question_categories',
-        nullable=False,
-    )
     answer_text: Mapped[str] = mapped_column(
         Text,
         nullable=False,
@@ -51,10 +45,6 @@ class UserAnswer(Base):
     )
     weaknesses: Mapped[str] = mapped_column(
         Text,
-        nullable=False
-    )
-    recommended_difficulty: Mapped[Difficulty] = mapped_column(
-        Enum(Difficulty),
         nullable=False
     )
     confidence: Mapped[float | None] = mapped_column(
