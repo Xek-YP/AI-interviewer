@@ -4,47 +4,78 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.repositories.interview_repository import interview_repository
 from database.repositories.interview_question_repository import interview_question_repository
-from database.repositories.question_category_repository import question_category_repository
 from database.repositories.user_answer_repository import user_answer_repository
-from database.models import InterviewQuestion, QuestionCategory, UserAnswer
+from database.models import InterviewQuestion, UserAnswer, Interview
 from database.enums import Difficulty, InterviewStatus
 from exceptions import (
     AlreadyAnsweredError,
-    NoActiveCategoriesError,
     QuestionNotFoundError,
     InterviewNotFoundOrInterraptedError,
-    InterviewIsCompletedError
+    InterviewIsCompletedError,
+    LLMServiceError,
+    NoAnswerError
 )
 from schemas.answer import SubmitAnswerResult
+from schemas.interview import InterviewEvaluation
 from .llm_service import llm_service
 
 
 class InterviewService:
     """Сервис работы с собеседовнаием."""
 
-    async def _generate_question(
+    async def _create_questions_pool(
         self,
         session: AsyncSession,
         interview_id: int,
-        question_category: QuestionCategory,
         difficulty: Difficulty,
-        order_number: int
-    ) -> InterviewQuestion:
-        """Создаёт и возвращает вопрос по заданной категории и сложности."""
-        question_text = await llm_service.generate_question(
+        position: str,
+        requirements: str,
+        max_questions: int
+    ) -> list[InterviewQuestion]:
+        """Генерирует и сохраняет пул вопросов для собеседования."""
+        questions = await llm_service.generate_question_pool(
             difficulty=difficulty,
-            category=question_category.name
+            position=position,
+            requirements=requirements,
+            max_questions=max_questions
         )
-        return await interview_question_repository.create(
-            session=session, interview_id=interview_id,
-            question_category_id=question_category.id,
-            question_text=question_text,
-            difficulty=difficulty, order_number=order_number
+        return await interview_question_repository.bulk_create(
+            session=session,
+            interview_id=interview_id,
+            questions=questions.questions
         )
 
     def _format_evaluation_items(self, items: list[str]) -> str:
         """Преобразует списки в строки."""
         return "\n".join(f"• {item}" for item in items)
+
+    def _format_answers_for_evaluation(
+        self,
+        answers: list[UserAnswer]
+    ) -> str:
+        """Преобразовывает список ответов пользователя в понятный текст."""
+        result = []
+
+        for index, answer in enumerate(answers, start=1):
+            result.append(
+                f"""
+                    Вопрос {index}:
+                    {answer.question.question_text}
+
+                    Ответ кандидата:
+                    {answer.answer_text}
+
+                    Оценка:
+                    {answer.score}
+
+                    Сильные стороны:
+                    {answer.strengths}
+
+                    Слабые стороны:
+                    {answer.weaknesses}
+                """
+            )
+        return '\n'.join(result)
 
     def _calculate_interview_score(
         self,
@@ -60,16 +91,12 @@ class InterviewService:
         session: AsyncSession,
         user_id: int,
         difficulty: Difficulty,
+        position: str,
+        requirements: str,
         max_questions: int
     ) -> InterviewQuestion:
-        """Создаёт собеседование в БД и возвращает 1 вопрос."""
+        """Создаёт собеседование и пул вопросов в БД, возвращает 1 вопрос."""
         try:
-            question_category=await question_category_repository.get_random_category(
-                session
-            )
-            if not question_category:
-                raise NoActiveCategoriesError('Нет активных категорий.')
-
             active_interview = await interview_repository.get_active_by_user_id(
                 session=session,
                 user_id=user_id
@@ -83,19 +110,29 @@ class InterviewService:
                 )
 
             interview = await interview_repository.create(
-                session=session, user_id=user_id,
-                difficulty=difficulty, max_questions=max_questions
+                session=session,
+                user_id=user_id,
+                difficulty=difficulty,
+                position=position,
+                requirements=requirements,
+                question_count=None,
             )
             await session.flush()
 
-            question = await self._generate_question(
-                session=session, interview_id=interview.id,
-                question_category=question_category, difficulty=difficulty,
-                order_number=1
+            questions = await self._create_questions_pool(
+                session=session,
+                interview_id=interview.id,
+                difficulty=difficulty,
+                position=position,
+                requirements=requirements,
+                max_questions=max_questions
             )
+            if not questions:
+                raise LLMServiceError('LLM не сгенирировала ни 1-го вопроса.')
+            interview.question_count = len(questions)
             await session.commit()
 
-            return question
+            return questions[0]
 
         except Exception:
             await session.rollback()
@@ -139,63 +176,90 @@ class InterviewService:
                     'На данный вопрос уже был получен ответ.'
                 )
 
-            next_category = await question_category_repository.get_random_category(
-                session
-            )
-            if not next_category:
-                raise NoActiveCategoriesError('Нет активных категорий.')
-
             llm_answer = await llm_service.evaluate_answer(
                 question=question.question_text,
                 answer=answer_text,
+                position=interview.position,
+                requirements=interview.requirements,
                 difficulty=question.difficulty,
-                category=question.category.name,
+                category=question.category,
             )
 
             user_answer = await user_answer_repository.create(
                 session=session,
                 interview_question_id=question.id,
-                recommended_category_id=next_category.id,
                 answer_text=answer_text,
                 score=llm_answer.score,
                 strengths=self._format_evaluation_items(llm_answer.strengths),
                 weaknesses=self._format_evaluation_items(llm_answer.weaknesses),
-                recommended_difficulty=llm_answer.recommended_difficulty,
                 confidence=llm_answer.confidence
             )
 
-            if question.order_number < interview.max_questions:
-                next_question = await self._generate_question(
-                    session=session,
-                    interview_id=interview.id,
-                    question_category=next_category,
-                    difficulty=llm_answer.recommended_difficulty,
-                    order_number=question.order_number + 1
-                )
-                interview_score = None
+            await session.flush()
 
-            else:
-                await session.flush()
-                answers = await user_answer_repository.get_all_by_interview_id(
-                    session=session,
-                    interview_id=interview.id
-                )
-                interview.status = InterviewStatus.COMPLETED
-                next_question = None
-                interview.score = self._calculate_interview_score(answers)
-                interview.completed_at = datetime.now(timezone.utc)
-                interview_score = interview.score
+            next_question = await interview_question_repository.get_current_question(
+                session=session,
+                telegram_id=telegram_id
+            )
 
+            if next_question:
+                await session.commit()
+                return SubmitAnswerResult(
+                    next_question=next_question,
+                    user_answer=user_answer,
+                    evaluation=None
+                )
+
+            evaluation = await self.finish_interview(
+                session=session,
+                interview=interview
+            )
             await session.commit()
 
             return SubmitAnswerResult(
-                next_question=next_question,
+                next_question=None,
                 user_answer=user_answer,
-                interview_score=interview_score
+                evaluation=evaluation
             )
 
         except Exception:
             await session.rollback()
             raise
+
+    async def finish_interview(
+        self,
+        session: AsyncSession,
+        interview: Interview
+    ) -> InterviewEvaluation:
+        """Завершает собеседование."""
+
+        answers = await user_answer_repository.get_all_by_interview_id(
+            session=session,
+            interview_id=interview.id,
+        )
+        if not answers:
+            raise NoAnswerError(
+                'Нельзя завершить собеседование без ответов.'
+            )
+
+        formatted_answers = self._format_answers_for_evaluation(
+            answers=answers
+        )
+
+        evalaution = await llm_service.evaluate_interview(
+            position=interview.position,
+            requirements=interview.requirements,
+            difficulty=interview.difficulty,
+            answers=formatted_answers
+        )
+        interview.score = evalaution.score
+        interview.summary = evalaution.summary
+        interview.strengths = self._format_evaluation_items(evalaution.strengths)
+        interview.weaknesses = self._format_evaluation_items(evalaution.weaknesses)
+        interview.recommendation = evalaution.recommendation
+        interview.status = InterviewStatus.COMPLETED
+        interview.completed_at = datetime.now(timezone.utc)
+        await session.flush()
+        return evalaution
 
 interview_service = InterviewService()

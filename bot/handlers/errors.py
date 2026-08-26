@@ -7,7 +7,6 @@ from exceptions import (
     AlreadyAnsweredError,
     InterviewIsCompletedError,
     InterviewNotFoundOrInterraptedError,
-    NoActiveCategoriesError,
     QuestionNotFoundError,
     LLMAuthenticationError,
     LLMInsufficientBalanceError,
@@ -32,9 +31,6 @@ ERROR_MESSAGES: dict[type[Exception], str] = {
 
     AlreadyAnsweredError:
         "На этот вопрос уже был получен ответ.",
-
-    NoActiveCategoriesError:
-        "Сейчас нет доступных категорий вопросов.",
 
     LLMTemporaryError:
         "Сервис временно недоступен. Попробуйте повторить действие позже.",

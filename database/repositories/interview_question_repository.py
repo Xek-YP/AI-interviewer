@@ -7,6 +7,7 @@ from database.enums import Difficulty
 from database.repositories.user_repository import user_repository
 from database.repositories.interview_repository import interview_repository
 from exceptions.interview_exception import InterviewNotFoundOrInterraptedError
+from schemas.interview_question import GeneratedQuestion
 
 
 class InterviewQuestionRepository:
@@ -18,21 +19,38 @@ class InterviewQuestionRepository:
         self,
         session: AsyncSession,
         interview_id: int,
-        question_category_id: int,
-        question_text: str,
-        difficulty: Difficulty,
+        question: GeneratedQuestion,
         order_number: int,
     ) -> InterviewQuestion:
         """Создаёт новый вопрос к собеседованию в БД."""
         interview_question = InterviewQuestion(
             interview_id=interview_id,
-            question_category_id=question_category_id,
-            question_text=question_text,
-            difficulty=difficulty,
+            category=question.category,
+            question_text=question.question_text,
+            difficulty=question.difficulty,
             order_number=order_number
         )
         session.add(interview_question)
         return interview_question
+
+    async def bulk_create(
+        self,
+        session: AsyncSession,
+        interview_id: int,
+        questions: list[GeneratedQuestion]
+    ) -> list[InterviewQuestion]:
+        """Создаёт весь пул вопросов одним добавлением в сессию."""
+        interview_questions = [
+            InterviewQuestion(
+                interview_id=interview_id,
+                category=question.category,
+                question_text=question.question_text,
+                difficulty=question.difficulty,
+                order_number=order_number,
+            ) for order_number, question in enumerate(questions, start=1)
+        ]
+        session.add_all(interview_questions)
+        return interview_questions
 
     async def get_by_id(
         self,
@@ -84,9 +102,7 @@ class InterviewQuestionRepository:
             ).where(
                 InterviewQuestion.interview_id == interview_id,
                 UserAnswer.id.is_(None),
-            ).order_by(InterviewQuestion.order_number).options(
-                joinedload(InterviewQuestion.category)
-            ).limit(1)
+            ).order_by(InterviewQuestion.order_number).limit(1)
         )
         result = await session.execute(stmt)
         return result.scalars().first()
@@ -95,7 +111,7 @@ class InterviewQuestionRepository:
         self,
         session: AsyncSession,
         telegram_id: int,
-    ) -> InterviewQuestion:
+    ) -> InterviewQuestion | None:
         user = await user_repository.get_by_telegram_id(
             session=session,
             telegram_id=telegram_id
@@ -111,11 +127,11 @@ class InterviewQuestionRepository:
                 'Не найдено активных собеседований.'
             )
 
-        questions = await self.get_unanswered_by_interview_id(
+        question = await self.get_unanswered_by_interview_id(
             session=session,
             interview_id=interview.id
         )
 
-        return questions
+        return question
 
 interview_question_repository = InterviewQuestionRepository()
