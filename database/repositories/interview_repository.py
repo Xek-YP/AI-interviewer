@@ -12,13 +12,17 @@ class InterviewRepository:
         session: AsyncSession,
         user_id: int,
         difficulty: Difficulty,
-        max_questions: int
+        position: str,
+        requirements: str,
+        question_count: int | None
     ) -> Interview:
         """Создаёт новое собеседование в БД."""
         interview = Interview(
             user_id=user_id,
             difficulty=difficulty,
-            max_questions=max_questions
+            position=position,
+            requirements=requirements,
+            question_count=question_count
         )
         session.add(interview)
         return interview

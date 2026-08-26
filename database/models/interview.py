@@ -46,9 +46,9 @@ class Interview(Base):
         Integer,
         nullable=True
     )
-    max_questions: Mapped[int] = mapped_column(
+    question_count: Mapped[int | None] = mapped_column(
         SmallInteger,
-        nullable=False
+        nullable=True
     )
     position: Mapped[str] = mapped_column(
         String(255),
@@ -57,6 +57,22 @@ class Interview(Base):
     requirements: Mapped[str] = mapped_column(
         Text,
         nullable=False
+    )
+    summary: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+    strengths: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+    weaknesses: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
+    )
+    recommendation: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -12,8 +12,8 @@ from openai import (
 from pydantic import ValidationError
 
 from constants.interview import (
-    ANSWER_PROMPT,
-    QUESTION_PROMPT, DEEPSEEK_BASE_URL,
+    ANSWER_PROMPT, INTERVIEW_EVALUATION_PROMPT,
+    QUESTION_POOL_PROMPT, DEEPSEEK_BASE_URL,
     MAX_LLM_ATTEMPTS, LLM_RETRY_DELAY
 )
 from config.settings import settings
@@ -25,6 +25,7 @@ from exceptions.llm_exception import (
     LLMTemporaryError
 )
 from schemas.answer import AnswerEvaluation
+from schemas.interview import InterviewEvaluation
 from schemas.interview_question import InterviewQuestionPool
 
 
@@ -142,7 +143,7 @@ class LLMService:
     ) -> InterviewQuestionPool:
         """Генерирует пул вопрос для технического собеседования."""
 
-        prompt = QUESTION_PROMPT.format(
+        prompt = QUESTION_POOL_PROMPT.format(
             difficulty=difficulty.value,
             position=position,
             requirements=requirements,
@@ -191,7 +192,9 @@ class LLMService:
         self,
         question: str,
         answer: str,
-        difficulty: Difficulty,
+        position: str,
+        requirements: str,
+        difficulty: str,
         category: str,
     ) -> AnswerEvaluation:
         """Оценивает ответ пользователя на поставленный ему вопрос."""
@@ -199,6 +202,8 @@ class LLMService:
         prompt = ANSWER_PROMPT.format(
             question=question,
             answer=answer,
+            position=position,
+            requirements=requirements,
             difficulty=difficulty.value,
             category=category
         )
@@ -233,6 +238,50 @@ class LLMService:
         except ValidationError as e:
             raise LLMServiceError(
                 'LLM вернула JSON не соответствующий схеме оценки.'
+            ) from e
+
+    async def evaluate_interview(
+        self,
+        position: str,
+        requirements: str,
+        difficulty: Difficulty,
+        answers: str
+    ) -> InterviewEvaluation:
+        """Оценивает кандидата после завершения собеседовнаия."""
+
+        prompt = INTERVIEW_EVALUATION_PROMPT.format(
+            position=position,
+            requirements=requirements,
+            difficulty=difficulty.value,
+            answers=answers
+        )
+
+        messages = [
+            {
+                'role': 'system',
+                'content': ('Ты оцениваешь кандидатов на технических собеседованиях')
+            },
+            {
+                'role': 'user',
+                'content': prompt
+            },
+        ]
+
+        response = await self._request_llm(
+            messages=messages,
+            temperature=0.2,
+            max_tokens=1000,
+            response_format={
+                'type': 'json_object'
+            },
+        )
+
+        try:
+            data = json.loads(response)
+            return InterviewEvaluation.model_validate(data)
+        except (json.JSONDecodeError, ValidationError) as e:
+            raise LLMServiceError(
+                'LLM вернула конечную оценку не праильной формы.'
             ) from e
 
 llm_service = LLMService()
