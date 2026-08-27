@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     """Настройки приложения."""
 
     telegram_bot_token: str
+    admin_telegram_id: int
 
     gemini_api_key: SecretStr
     deepseek_api_key: SecretStr

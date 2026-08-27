@@ -10,3 +10,7 @@ class InterviewEvaluation(BaseModel):
     weaknesses: list[str]
     recommendation: str
     confidence: float | None = Field(ge=0, le=1)
+
+class InterviewRequestValidation(BaseModel):
+    valid: bool
+    reason: str

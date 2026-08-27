@@ -66,6 +66,25 @@ class InterviewRepository:
         result = await session.execute(stmt)
         return result.scalars().first()
 
+    async def get_history_by_user_id(
+        self,
+        session: AsyncSession,
+        user_id: int,
+        limit: int = 10,
+    ) -> list[Interview]:
+        """Возвращает историю собеседований пользоваетля."""
+
+        stmt = (
+            select(Interview).where(
+                Interview.user_id == user_id,
+                Interview.status != InterviewStatus.IN_PROGRESS
+            ).order_by(Interview.completed_at.desc()).limit(limit)
+        )
+
+        result = await session.execute(stmt)
+
+        return result.scalars().all()
+
     async def update(
         self,
         session: AsyncSession,

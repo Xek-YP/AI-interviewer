@@ -12,7 +12,7 @@ from openai import (
 from pydantic import ValidationError
 
 from constants.interview import (
-    ANSWER_PROMPT, INTERVIEW_EVALUATION_PROMPT,
+    ANSWER_PROMPT, INTERVIEW_EVALUATION_PROMPT, INTERVIEW_VALIDATION_PROMPT,
     QUESTION_POOL_PROMPT, DEEPSEEK_BASE_URL,
     MAX_LLM_ATTEMPTS, LLM_RETRY_DELAY
 )
@@ -25,7 +25,7 @@ from exceptions.llm_exception import (
     LLMTemporaryError
 )
 from schemas.answer import AnswerEvaluation
-from schemas.interview import InterviewEvaluation
+from schemas.interview import InterviewEvaluation, InterviewRequestValidation
 from schemas.interview_question import InterviewQuestionPool
 
 
@@ -282,6 +282,54 @@ class LLMService:
         except (json.JSONDecodeError, ValidationError) as e:
             raise LLMServiceError(
                 'LLM вернула конечную оценку не праильной формы.'
+            ) from e
+
+
+    async def validate_interview_request(
+        self,
+        position: str,
+        requirements: str,
+    ) -> InterviewRequestValidation:
+        """Проверяет корректность данных вакансии."""
+
+        prompt = INTERVIEW_VALIDATION_PROMPT.format(
+            position=position,
+            requirements=requirements,
+        )
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "Ты проверяешь данные для технического интервью. "
+                    "Отвечай только JSON."
+                ),
+            },
+            {
+                "role": "user",
+                "content": prompt,
+            },
+        ]
+
+        response = await self._request_llm(
+            messages=messages,
+            temperature=0,
+            max_tokens=200,
+            response_format={
+                "type": "json_object"
+            },
+        )
+
+        try:
+            data = json.loads(response)
+
+            return InterviewRequestValidation.model_validate(
+                data
+            )
+
+        except (json.JSONDecodeError, ValidationError) as e:
+            raise LLMServiceError(
+                "LLM вернула некорректный ответ при проверке вакансии."
             ) from e
 
 llm_service = LLMService()
