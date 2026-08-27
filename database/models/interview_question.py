@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import (
     DateTime, Enum,
     ForeignKey, Text,
-    Integer, SmallInteger,
+    Integer, SmallInteger, String,
     UniqueConstraint
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
@@ -32,10 +32,8 @@ class InterviewQuestion(Base):
         name='fk_interview_questions_interview_id_interview',
         nullable=False,
     )
-    question_category_id: Mapped[int] = mapped_column(
-        Integer,
-        ForeignKey('question_categories.id'),
-        name='fk_interview_questions_question_category_id_question_categories',
+    category: Mapped[str] = mapped_column(
+        String(100),
         nullable=False,
     )
     question_text: Mapped[str] = mapped_column(
@@ -63,10 +61,6 @@ class InterviewQuestion(Base):
         'UserAnswer',
         back_populates='question',
         uselist=False
-    )
-    category: Mapped['QuestionCategory'] = relationship(
-        'QuestionCategory',
-        back_populates='questions'
     )
 
     __table_args__ = (

@@ -12,13 +12,17 @@ class InterviewRepository:
         session: AsyncSession,
         user_id: int,
         difficulty: Difficulty,
-        max_questions: int
+        position: str,
+        requirements: str,
+        question_count: int | None
     ) -> Interview:
         """Создаёт новое собеседование в БД."""
         interview = Interview(
             user_id=user_id,
             difficulty=difficulty,
-            max_questions=max_questions
+            position=position,
+            requirements=requirements,
+            question_count=question_count
         )
         session.add(interview)
         return interview
@@ -62,6 +66,25 @@ class InterviewRepository:
         result = await session.execute(stmt)
         return result.scalars().first()
 
+    async def get_history_by_user_id(
+        self,
+        session: AsyncSession,
+        user_id: int,
+        limit: int = 10,
+    ) -> list[Interview]:
+        """Возвращает историю собеседований пользоваетля."""
+
+        stmt = (
+            select(Interview).where(
+                Interview.user_id == user_id,
+                Interview.status != InterviewStatus.IN_PROGRESS
+            ).order_by(Interview.completed_at.desc()).limit(limit)
+        )
+
+        result = await session.execute(stmt)
+
+        return result.scalars().all()
+
     async def update(
         self,
         session: AsyncSession,
@@ -69,3 +92,5 @@ class InterviewRepository:
     ) -> None:
         """Обновляет данные собеседования в БД."""
         session.add(interview)
+
+interview_repository = InterviewRepository()
