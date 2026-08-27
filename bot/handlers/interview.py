@@ -6,11 +6,13 @@ from bot.handlers.start import MAIN_KEYBOARD
 from bot.keyboards.buttons_text import (
     START_INTERVIEW,
     DIFFICULTY_BUTTONS,
+    VIEW_HISTORY
 )
 from bot.keyboards.difficulty_keyboard import create_difficulty_keyboard
 from bot.states.interview import InterviewStates
 
 from database.session import AsyncSessionLocal
+from exceptions import InvalidInterviewRequestError
 from services.interview_service import interview_service
 from services.user_service import user_service
 
@@ -25,9 +27,7 @@ async def start_interview_handler(
     message: Message,
     state: FSMContext,
 ):
-    """
-    Запуск создания интервью.
-    """
+    """Запуск создания интервью."""
 
     await state.set_state(
         InterviewStates.waiting_position
@@ -43,11 +43,18 @@ async def position_handler(
     message: Message,
     state: FSMContext,
 ):
-    """
-    Получение позиции.
-    """
+    """Получение позиции."""
 
     if not message.text:
+        return
+
+    position = message.text.strip()
+
+    if len(position) < 3:
+        await message.answer(
+            'Название должности слишком короткое. '
+            'Введите реальную должность.'
+        )
         return
 
     await state.update_data(
@@ -70,11 +77,17 @@ async def requirements_handler(
     message: Message,
     state: FSMContext,
 ):
-    """
-    Получение требований.
-    """
+    """Получение требований."""
 
     if not message.text:
+        return
+
+    requirements = message.text.strip()
+
+    if len(requirements) < 15:
+        await message.answer(
+            'Введите больше информации о вакансии.'
+        )
         return
 
     await state.update_data(
@@ -99,9 +112,7 @@ async def difficulty_handler(
     message: Message,
     state: FSMContext,
 ):
-    """
-    Создание интервью.
-    """
+    """Создание интервью."""
 
     if message.from_user is None:
         return
@@ -126,23 +137,34 @@ async def difficulty_handler(
 
         return
 
+    try:
+        async with AsyncSessionLocal() as session:
 
-    async with AsyncSessionLocal() as session:
+            user = await user_service.get_user(
+                session=session,
+                telegram_id=message.from_user.id,
+            )
 
-        user = await user_service.get_user(
-            session=session,
-            telegram_id=message.from_user.id,
+
+            question = await interview_service.start_interview(
+                session=session,
+                user_id=user.id,
+                difficulty=difficulty,
+                position=position,
+                requirements=requirements,
+                max_questions=5,
+            )
+    except InvalidInterviewRequestError as e:
+        await state.set_state(
+            InterviewStates.waiting_position
         )
-
-
-        question = await interview_service.start_interview(
-            session=session,
-            user_id=user.id,
-            difficulty=difficulty,
-            position=position,
-            requirements=requirements,
-            max_questions=5,
+        await message.answer(
+            str(e)
         )
+        await message.answer(
+            'Введите данные должности заново.'
+        )
+        return
 
 
     await state.set_state(
@@ -200,9 +222,6 @@ async def submit_answer_handler(
             f"📉 Слабые стороны:\n"
             f"{result.user_answer.weaknesses}\n\n"
 
-            f"🎯 Уверенность: "
-            f"{result.user_answer.confidence * 100:.0f}%\n\n"
-
             "━━━━━━━━━━━━━━━━━━\n\n"
 
             f"Следующий вопрос:\n"
@@ -225,10 +244,10 @@ async def submit_answer_handler(
             f"{evaluation.summary}\n\n"
 
             f"💪 Сильные стороны:\n"
-            f"{evaluation.strengths}\n\n"
+            f"{interview_service._format_evaluation_items(evaluation.strengths)}\n\n"
 
             f"📉 Слабые стороны:\n"
-            f"{evaluation.weaknesses}\n\n"
+            f"{interview_service._format_evaluation_items(evaluation.weaknesses)}\n\n"
 
             f"🎯 Рекомендация:\n"
             f"{evaluation.recommendation}"
@@ -239,3 +258,45 @@ async def submit_answer_handler(
         response_text,
         reply_markup=MAIN_KEYBOARD,
     )
+
+@router.message(F.text == VIEW_HISTORY)
+async def history_handler(
+    message: Message,
+):
+    if message.from_user is None:
+        return
+
+    async with AsyncSessionLocal() as session:
+
+        user = await user_service.get_user(
+            session=session,
+            telegram_id=message.from_user.id,
+        )
+
+        interviews = await interview_service.get_history(
+            session=session,
+            user_id=user.id,
+        )
+
+
+    if not interviews:
+        await message.answer(
+            "У вас пока нет завершенных собеседований."
+        )
+        return
+
+
+    response = "📚 История собеседований:\n\n"
+
+
+    for interview in interviews:
+
+        response += (
+            f"📝 {interview.position}\n"
+            f"📅 {interview.completed_at:%d.%m.%Y}\n"
+            f"⭐ Оценка: {interview.score}/100\n"
+            f"🎯 Рекомендация: {interview.recommendation}\n\n"
+        )
+
+
+    await message.answer(response)

@@ -12,6 +12,7 @@ from exceptions import (
     QuestionNotFoundError,
     InterviewNotFoundOrInterraptedError,
     InterviewIsCompletedError,
+    InvalidInterviewRequestError,
     LLMServiceError,
     NoAnswerError
 )
@@ -97,6 +98,14 @@ class InterviewService:
     ) -> InterviewQuestion:
         """Создаёт собеседование и пул вопросов в БД, возвращает 1 вопрос."""
         try:
+            validation = await llm_service.validate_interview_request(
+                position=position,
+                requirements=requirements
+            )
+
+            if not validation.valid:
+                raise InvalidInterviewRequestError(validation.reason)
+
             active_interview = await interview_repository.get_active_by_user_id(
                 session=session,
                 user_id=user_id
@@ -262,4 +271,16 @@ class InterviewService:
         await session.flush()
         return evalaution
 
+    async def get_history(
+        self,
+        session: AsyncSession,
+        user_id: int
+    ) -> list[Interview]:
+        """Возвращает список собеседований пользователя."""
+
+        return await interview_repository.get_history_by_user_id(
+            session=session,
+            user_id=user_id
+        )
+        
 interview_service = InterviewService()

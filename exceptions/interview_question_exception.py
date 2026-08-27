@@ -1,2 +1,5 @@
-class QuestionNotFoundError(Exception):
+from .base import UserVisibleError
+
+
+class QuestionNotFoundError(UserVisibleError):
     """Ошибка не найден вопрос."""
