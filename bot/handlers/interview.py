@@ -6,7 +6,9 @@ from bot.handlers.start import MAIN_KEYBOARD
 from bot.keyboards.buttons_text import (
     START_INTERVIEW,
     DIFFICULTY_BUTTONS,
-    VIEW_HISTORY
+    VIEW_HISTORY,
+    PROFILE,
+    HELP
 )
 from bot.keyboards.difficulty_keyboard import create_difficulty_keyboard
 from bot.states.interview import InterviewStates
@@ -34,7 +36,7 @@ async def start_interview_handler(
     )
 
     await message.answer(
-        "Введите название должности, на которую хотите пройти собеседование."
+        'Введите название должности, на которую хотите пройти собеседование.'
     )
 
 
@@ -66,9 +68,9 @@ async def position_handler(
     )
 
     await message.answer(
-        "Теперь отправьте требования вакансии.\n\n"
-        "Например:\n"
-        "Python, Django, PostgreSQL, Redis, Docker."
+        'Теперь отправьте требования вакансии.\n\n'
+        'Например:\n'
+        'Python, Django, PostgreSQL, Redis, Docker.'
     )
 
 
@@ -99,7 +101,7 @@ async def requirements_handler(
     )
 
     await message.answer(
-        "Выберите сложность собеседования.",
+        'Выберите сложность собеседования.',
         reply_markup=DIFFICULTY_KEYBOARD,
     )
 
@@ -124,14 +126,14 @@ async def difficulty_handler(
 
     data = await state.get_data()
 
-    position = data.get("position")
-    requirements = data.get("requirements")
+    position = data.get('position')
+    requirements = data.get('requirements')
 
     if not position or not requirements:
         await state.clear()
 
         await message.answer(
-            "Ошибка создания интервью. Начните заново.",
+            'Ошибка создания интервью. Начните заново.',
             reply_markup=MAIN_KEYBOARD,
         )
 
@@ -178,10 +180,10 @@ async def difficulty_handler(
 
 
     await message.answer(
-        "Собеседование началось.\n\n"
-        f"Должность: {position}\n\n"
-        f"Первый вопрос:\n"
-        f"{question.question_text}",
+        'Собеседование началось.\n\n'
+        f'Должность: {position}\n\n'
+        f'Первый вопрос:\n'
+        f'{question.question_text}',
         reply_markup=MAIN_KEYBOARD,
     )
 
@@ -191,9 +193,7 @@ async def submit_answer_handler(
     message: Message,
     state: FSMContext,
 ):
-    """
-    Обработка ответов пользователя.
-    """
+    """Обработка ответов пользователя."""
 
     if message.from_user is None:
         return
@@ -214,18 +214,18 @@ async def submit_answer_handler(
     if result.next_question:
 
         response_text = (
-            f"📊 Оценка ответа: "
-            f"{result.user_answer.score}/100\n\n"
-            f"💪 Сильные стороны:\n"
-            f"{result.user_answer.strengths}\n\n"
+            f'📊 Оценка ответа: '
+            f'{result.user_answer.score}/100\n\n'
+            f'💪 Сильные стороны:\n'
+            f'{result.user_answer.strengths}\n\n'
 
-            f"📉 Слабые стороны:\n"
-            f"{result.user_answer.weaknesses}\n\n"
+            f'📉 Слабые стороны:\n'
+            f'{result.user_answer.weaknesses}\n\n'
 
-            "━━━━━━━━━━━━━━━━━━\n\n"
+            '━━━━━━━━━━━━━━━━━━\n\n'
 
-            f"Следующий вопрос:\n"
-            f"{result.next_question.question_text}"
+            f'Следующий вопрос:\n'
+            f'{result.next_question.question_text}'
         )
 
     else:
@@ -235,22 +235,22 @@ async def submit_answer_handler(
         await state.clear()
 
         response_text = (
-            "🏁 Собеседование завершено!\n\n"
+            '🏁 Собеседование завершено!\n\n'
 
-            f"⭐ Итоговая оценка: "
-            f"{evaluation.score}/100\n\n"
+            f'⭐ Итоговая оценка: '
+            f'{evaluation.score}/100\n\n'
 
-            f"📝 Общий вывод:\n"
-            f"{evaluation.summary}\n\n"
+            f'📝 Общий вывод:\n'
+            f'{evaluation.summary}\n\n'
 
-            f"💪 Сильные стороны:\n"
-            f"{interview_service._format_evaluation_items(evaluation.strengths)}\n\n"
+            f'💪 Сильные стороны:\n'
+            f'{interview_service._format_evaluation_items(evaluation.strengths)}\n\n'
 
-            f"📉 Слабые стороны:\n"
-            f"{interview_service._format_evaluation_items(evaluation.weaknesses)}\n\n"
+            f'📉 Слабые стороны:\n'
+            f'{interview_service._format_evaluation_items(evaluation.weaknesses)}\n\n'
 
-            f"🎯 Рекомендация:\n"
-            f"{evaluation.recommendation}"
+            f'🎯 Рекомендация:\n'
+            f'{evaluation.recommendation}'
         )
 
 
@@ -281,22 +281,34 @@ async def history_handler(
 
     if not interviews:
         await message.answer(
-            "У вас пока нет завершенных собеседований."
+            'У вас пока нет завершенных собеседований.'
         )
         return
 
 
-    response = "📚 История собеседований:\n\n"
+    response = '📚 История собеседований:\n\n'
 
 
     for interview in interviews:
 
         response += (
-            f"📝 {interview.position}\n"
-            f"📅 {interview.completed_at:%d.%m.%Y}\n"
-            f"⭐ Оценка: {interview.score}/100\n"
-            f"🎯 Рекомендация: {interview.recommendation}\n\n"
+            f'📝 {interview.position}\n'
+            f'📅 {interview.completed_at:%d.%m.%Y}\n'
+            f'⭐ Оценка: {interview.score}/100\n'
+            f'🎯 Рекомендация: {interview.recommendation}\n\n'
         )
 
 
     await message.answer(response)
+
+@router.message(F.text == PROFILE)
+async def history_handler(
+    message: Message,
+):
+    await message.answer('Функция находится на стадии разработки.')
+
+@router.message(F.text == HELP)
+async def history_handler(
+    message: Message,
+):
+    await message.answer('Функция находится на стадии разработки.')

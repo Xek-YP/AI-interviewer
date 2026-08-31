@@ -299,15 +299,15 @@ class LLMService:
 
         messages = [
             {
-                "role": "system",
-                "content": (
-                    "Ты проверяешь данные для технического интервью. "
-                    "Отвечай только JSON."
+                'role': 'system',
+                'content': (
+                    'Ты проверяешь данные для технического интервью. '
+                    'Отвечай только JSON.'
                 ),
             },
             {
-                "role": "user",
-                "content": prompt,
+                'role': 'user',
+                'content': prompt,
             },
         ]
 
@@ -316,7 +316,7 @@ class LLMService:
             temperature=0,
             max_tokens=200,
             response_format={
-                "type": "json_object"
+                'type': 'json_object'
             },
         )
 
@@ -329,7 +329,7 @@ class LLMService:
 
         except (json.JSONDecodeError, ValidationError) as e:
             raise LLMServiceError(
-                "LLM вернула некорректный ответ при проверке вакансии."
+                'LLM вернула некорректный ответ при проверке вакансии.'
             ) from e
 
 llm_service = LLMService()

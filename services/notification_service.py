@@ -12,14 +12,14 @@ class NotificationService:
         user_id: int | None = None,
     ):
         message = (
-            "🚨 Ошибка в боте\n\n"
-            f"Тип: {type(exception).__name__}\n"
-            f"Ошибка: {exception}\n"
+            '🚨 Ошибка в боте\n\n'
+            f'Тип: {type(exception).__name__}\n'
+            f'Ошибка: {exception}\n'
         )
 
         if user_id:
             message += (
-                f"\nПользователь: {user_id}"
+                f'\nПользователь: {user_id}'
             )
 
         await bot.send_message(
