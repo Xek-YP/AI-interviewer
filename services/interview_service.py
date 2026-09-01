@@ -282,5 +282,29 @@ class InterviewService:
             session=session,
             user_id=user_id
         )
+
+    async def interrupted_interview(
+        self,
+        session: AsyncSession,
+        user_id: int
+    ) -> None:
+        """Завершает начатое собеседование."""
+
+        interview = await interview_repository.get_active_by_user_id(
+            session=session,
+            user_id=user_id
+        )
+        if not interview:
+            raise InterviewNotFoundOrInterraptedError(
+                'Собеседование не найдено или уже закончено.'
+            )
+        interview.status = InterviewStatus.INTERRUPTED
+        interview.completed_at = datetime.now(timezone.utc)
+
+        await session.commit()
+
+
+        
+        
         
 interview_service = InterviewService()

@@ -8,9 +8,12 @@ from bot.keyboards.buttons_text import (
     DIFFICULTY_BUTTONS,
     VIEW_HISTORY,
     PROFILE,
-    HELP
+    HELP,
+    END_INTERVIEW,
+    MAIN_MENU_BUTTONS
 )
 from bot.keyboards.difficulty_keyboard import create_difficulty_keyboard
+from bot.keyboards.interview_keyboard import create_interview_keyboard
 from bot.states.interview import InterviewStates
 
 from database.session import AsyncSessionLocal
@@ -22,6 +25,7 @@ from services.user_service import user_service
 router = Router()
 
 DIFFICULTY_KEYBOARD = create_difficulty_keyboard()
+INTERVIEW_KEYBOARD = create_interview_keyboard()
 
 
 @router.message(F.text == START_INTERVIEW)
@@ -52,7 +56,7 @@ async def position_handler(
 
     position = message.text.strip()
 
-    if len(position) < 3:
+    if len(position) < 4:
         await message.answer(
             'Название должности слишком короткое. '
             'Введите реальную должность.'
@@ -184,11 +188,14 @@ async def difficulty_handler(
         f'Должность: {position}\n\n'
         f'Первый вопрос:\n'
         f'{question.question_text}',
-        reply_markup=MAIN_KEYBOARD,
+        reply_markup=INTERVIEW_KEYBOARD,
     )
 
 
-@router.message(InterviewStates.answering)
+@router.message(
+    InterviewStates.answering,
+    F.text.not_in(MAIN_MENU_BUTTONS | {END_INTERVIEW})
+)
 async def submit_answer_handler(
     message: Message,
     state: FSMContext,
@@ -228,6 +235,11 @@ async def submit_answer_handler(
             f'{result.next_question.question_text}'
         )
 
+        await message.answer(
+                response_text,
+                reply_markup=INTERVIEW_KEYBOARD,
+            )
+
     else:
 
         evaluation = result.evaluation
@@ -254,10 +266,10 @@ async def submit_answer_handler(
         )
 
 
-    await message.answer(
-        response_text,
-        reply_markup=MAIN_KEYBOARD,
-    )
+        await message.answer(
+            response_text,
+            reply_markup=MAIN_KEYBOARD,
+        )
 
 @router.message(F.text == VIEW_HISTORY)
 async def history_handler(
@@ -312,3 +324,28 @@ async def history_handler(
     message: Message,
 ):
     await message.answer('Функция находится на стадии разработки.')
+
+@router.message(F.text == END_INTERVIEW)
+async def end_interview_handler(
+    message: Message,
+    state: FSMContext
+):
+    """Завершение собеседования."""
+
+    await state.clear()
+
+    async with AsyncSessionLocal() as session:
+        user = await user_service.get_user(
+            session=session,
+            telegram_id=message.from_user.id,
+        )
+
+        await interview_service.interrupted_interview(
+            session=session,
+            user_id=user.id
+        )
+
+    await message.answer(
+        'Собеседование завершено.',
+        reply_markup=MAIN_KEYBOARD
+    )

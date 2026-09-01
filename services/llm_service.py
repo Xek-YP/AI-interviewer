@@ -167,7 +167,7 @@ class LLMService:
         response = await self._request_llm(
             messages=messages,
             temperature=0.7,
-            max_tokens=2000,
+            max_tokens=1500,
             response_format={'type': 'json_object'},
         )
         try:
