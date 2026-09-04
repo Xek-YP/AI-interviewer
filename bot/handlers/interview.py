@@ -3,6 +3,11 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from bot.handlers.start import MAIN_KEYBOARD
+from bot.handlers.messages import (
+    HELP_MESSAGE,
+    END_INTERVIEW_MESSAGE,
+    GENERATED_QUESTIONS
+)
 from bot.keyboards.buttons_text import (
     START_INTERVIEW,
     DIFFICULTY_BUTTONS,
@@ -151,6 +156,7 @@ async def difficulty_handler(
                 telegram_id=message.from_user.id,
             )
 
+            await message.answer(GENERATED_QUESTIONS)
 
             question = await interview_service.start_interview(
                 session=session,
@@ -160,6 +166,7 @@ async def difficulty_handler(
                 requirements=requirements,
                 max_questions=5,
             )
+
     except InvalidInterviewRequestError as e:
         await state.set_state(
             InterviewStates.waiting_position
@@ -323,7 +330,7 @@ async def history_handler(
 async def history_handler(
     message: Message,
 ):
-    await message.answer('Функция находится на стадии разработки.')
+    await message.answer(HELP_MESSAGE)
 
 @router.message(F.text == END_INTERVIEW)
 async def end_interview_handler(
@@ -346,6 +353,6 @@ async def end_interview_handler(
         )
 
     await message.answer(
-        'Собеседование завершено.',
+        END_INTERVIEW_MESSAGE,
         reply_markup=MAIN_KEYBOARD
     )
