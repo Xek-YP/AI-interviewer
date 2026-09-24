@@ -1,8 +1,8 @@
-"""Initial migration
+"""Initial migrate
 
-Revision ID: 8811d2932238
+Revision ID: e1ea3c9ac27e
 Revises: 
-Create Date: 2026-08-26 11:42:09.830757
+Create Date: 2026-09-24 15:57:07.601264
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '8811d2932238'
+revision: str = 'e1ea3c9ac27e'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -40,6 +40,10 @@ def upgrade() -> None:
     sa.Column('question_count', sa.SmallInteger(), nullable=True),
     sa.Column('position', sa.String(length=255), nullable=False),
     sa.Column('requirements', sa.Text(), nullable=False),
+    sa.Column('summary', sa.Text(), nullable=True),
+    sa.Column('strengths', sa.Text(), nullable=True),
+    sa.Column('weaknesses', sa.Text(), nullable=True),
+    sa.Column('recommendation', sa.Text(), nullable=True),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),

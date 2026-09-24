@@ -15,7 +15,7 @@ from database.enums import Difficulty
 
 
 if TYPE_CHECKING:
-    from database.models import Interview, UserAnswer, QuestionCategory
+    from database.models import Interview, UserAnswer
 
 class InterviewQuestion(Base):
     """Модель вопросов, заданных непосредственно во время собеседования."""

@@ -1,11 +1,12 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BIGINT, DateTime, Integer, String
+from sqlalchemy import BIGINT, DateTime, Integer, String, Enum
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
 from database.models.base import Base
+from database.enums import SubscriptionType
 
 if TYPE_CHECKING:
     from database.models import Interview
@@ -31,6 +32,11 @@ class User(Base):
     first_name: Mapped[str] = mapped_column(
         String(128),
         nullable=False,
+    )
+    subscription_type: Mapped[SubscriptionType] = mapped_column(
+        Enum(SubscriptionType),
+        default=SubscriptionType.FREE,
+        nullable=False
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -13,3 +13,9 @@ class InterviewStatus(StrEnum):
     IN_PROGRESS = 'IN_PROGRESS'
     COMPLETED = 'COMPLETED'
     INTERRUPTED = 'INTERRUPTED'
+
+class SubscriptionType(StrEnum):
+    """Тип подписки."""
+
+    FREE = 'free'
+    PREMIUM = 'premium'
