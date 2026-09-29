@@ -9,7 +9,7 @@ from database.models.base import Base
 from database.enums import SubscriptionType
 
 if TYPE_CHECKING:
-    from database.models import Interview
+    from database.models import Interview, Payment
 
 class User(Base):
     """Модель пользователя."""
@@ -60,4 +60,7 @@ class User(Base):
     )
     interviews: Mapped[list['Interview']] = relationship(
         'Interview', back_populates='user'
+    )
+    payments: Mapped[list['Payment']] = relationship(
+        'Payment', back_populates='user'
     )

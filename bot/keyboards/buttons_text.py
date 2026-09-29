@@ -4,6 +4,7 @@ START_INTERVIEW = '🎤 Начать собеседование'
 VIEW_HISTORY = '📈 История'
 PROFILE = '🧑 Профиль'
 HELP = '❗ Помощь'
+BUY_PREMIUM = '💎 PREMIUM'
 END_INTERVIEW = 'Звершить собеседование'
 DIFFICULTY_BUTTONS = {
     'Junior': Difficulty.JUNIOR,
@@ -14,4 +15,12 @@ JUNIOR = 'Junior'
 MIDDLE = 'Middle'
 SENIOR = 'Senior'
 
-MAIN_MENU_BUTTONS = {START_INTERVIEW, VIEW_HISTORY, PROFILE, HELP}
+MAIN_MENU_BUTTONS = {
+    START_INTERVIEW,
+    VIEW_HISTORY,
+    PROFILE,
+    HELP,
+    BUY_PREMIUM,
+}
+
+BUY_PREMIUM_CALLBACK = 'buy_premium'

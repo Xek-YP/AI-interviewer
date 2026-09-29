@@ -23,6 +23,13 @@ class Settings(BaseSettings):
     admin_host: str = '127.0.0.1'
     admin_port: int = 8000
 
+    # Оплата PREMIUM через Telegram Stars (XTR).
+    premium_price_stars: int = 100
+    # Для обычных платежей (ЮKassa и т.п.) можно задать токен провайдера.
+    # Для Stars оставьте пустым.
+    payment_provider_token: str = ''
+    payment_currency: str = 'XTR'
+
     @property
     def database_url(self) -> str:
         """Строка подключения к БД."""

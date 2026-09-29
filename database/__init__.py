@@ -5,7 +5,9 @@ from database.models import (
     InterviewQuestion,
     UserAnswer,
     Prompt,
+    Payment,
 )
+from database.models.payment import PaymentStatus
 from .enums import Difficulty, InterviewStatus
 
 __all__ = [
@@ -15,6 +17,8 @@ __all__ = [
     'InterviewQuestion',
     'UserAnswer',
     'Prompt',
+    'Payment',
+    'PaymentStatus',
     'Difficulty',
     'InterviewStatus',
 ]

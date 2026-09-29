@@ -3,7 +3,8 @@ import logging
 from aiogram import Bot, Router
 from aiogram.types import ErrorEvent
 
-from exceptions import UserVisibleError
+from bot.keyboards.payment_keyboard import create_buy_premium_keyboard
+from exceptions import InterviewLimitExceededError, UserVisibleError
 from services.notification_service import notification_service
 
 router = Router()
@@ -20,27 +21,49 @@ async def error_handler(
 
     exception = event.exception
     message = event.update.message
+    callback = event.update.callback_query
     user_id = None
 
     if message and message.from_user:
         user_id = message.from_user.id
+    elif callback and callback.from_user:
+        user_id = callback.from_user.id
+
+    if isinstance(exception, InterviewLimitExceededError):
+        text = str(exception)
+        markup = create_buy_premium_keyboard()
+        if message:
+            await message.answer(text, reply_markup=markup)
+        elif callback and callback.message:
+            await callback.message.answer(text, reply_markup=markup)
+            await callback.answer()
+        return
+
+    if isinstance(exception, UserVisibleError):
+        error_message = str(exception)
+    else:
+        error_message = (
+            'Извините, произошла ошибка по нашей вине. '
+            'Мы уже работаем над исправлением.'
+        )
+        logger.exception(
+            'Ошибка handler: %s',
+            exception
+        )
+        await notification_service.send_error(
+            bot=bot,
+            exception=exception,
+            user_id=user_id
+        )
 
     if message:
-        if isinstance(exception, UserVisibleError):
-            error_message = str(exception)
-        else:
-            error_message = (
-                'Извините, произошла ошибка по нашей вине. '
-                'Мы уже работаем над исправлением.'
-            )
-            logger.exception(
-                'Ошибка handler: %s',
-                exception
-            )
-            await notification_service.send_error(
-                bot=bot,
-                exception=exception,
-                user_id=user_id
-            )
+        await message.answer(error_message)
+        return
 
-    await message.answer(error_message)
+    if callback:
+        try:
+            await callback.answer(error_message, show_alert=True)
+        except Exception:
+            if callback.message:
+                await callback.message.answer(error_message)
+        return

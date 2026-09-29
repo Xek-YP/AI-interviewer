@@ -52,9 +52,18 @@ class SubscriptionService:
         user: User,
         started_at: datetime | None = None,
     ) -> User:
-        """Оформляет PREMIUM на 30 дней с указанной даты."""
+        """Оформляет или продлевает PREMIUM на 30 дней."""
+        now = self._now(started_at)
+
+        if self.is_premium_active(user=user, now=now):
+            # Продлеваем от текущей даты окончания, а не сбрасываем срок.
+            expires_at = self.get_premium_expires_at(user)
+            assert expires_at is not None
+            user.subscription_started_at = expires_at
+        else:
+            user.subscription_started_at = now
+
         user.subscription_type = SubscriptionType.PREMIUM
-        user.subscription_started_at = self._now(started_at)
         return user
 
     def expire_premium_if_needed(
@@ -141,7 +150,8 @@ class SubscriptionService:
         raise InterviewLimitExceededError(
             'На бесплатном тарифе доступно только '
             f'{FREE_MONTHLY_INTERVIEW_LIMIT} собеседования в месяц.\n'
-            f'Оформите PREMIUM на {PREMIUM_DURATION_DAYS} дней, '
+            f'Оформите PREMIUM на {PREMIUM_DURATION_DAYS} дней '
+            'через кнопку «💎 PREMIUM», '
             'чтобы проходить собеседования без ограничений.'
         )
 

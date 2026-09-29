@@ -14,6 +14,7 @@ from bot.states.interview import InterviewStates
 
 from database.session import AsyncSessionLocal
 from exceptions import InterviewLimitExceededError, InvalidInterviewRequestError
+from bot.keyboards.payment_keyboard import create_buy_premium_keyboard
 from services.interview_service import interview_service
 from services.subscription_service import subscription_service
 from services.user_service import user_service
@@ -35,15 +36,22 @@ async def start_interview_handler(
     if message.from_user is None:
         return
 
-    async with AsyncSessionLocal() as session:
-        user = await user_service.get_user(
-            session=session,
-            telegram_id=message.from_user.id,
+    try:
+        async with AsyncSessionLocal() as session:
+            user = await user_service.get_user(
+                session=session,
+                telegram_id=message.from_user.id,
+            )
+            await subscription_service.ensure_can_start_interview(
+                session=session,
+                user=user,
+            )
+    except InterviewLimitExceededError as e:
+        await message.answer(
+            str(e),
+            reply_markup=create_buy_premium_keyboard(),
         )
-        await subscription_service.ensure_can_start_interview(
-            session=session,
-            user=user,
-        )
+        return
 
     await state.set_state(
         InterviewStates.waiting_position
@@ -190,6 +198,10 @@ async def difficulty_handler(
         await state.clear()
         await message.answer(
             str(e),
+            reply_markup=create_buy_premium_keyboard(),
+        )
+        await message.answer(
+            'Вернуться в меню:',
             reply_markup=MAIN_KEYBOARD,
         )
         return

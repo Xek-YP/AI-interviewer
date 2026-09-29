@@ -2,9 +2,11 @@ from aiogram import F, Router
 from aiogram.types import Message
 
 from bot.keyboards.buttons_text import PROFILE
+from bot.keyboards.payment_keyboard import create_buy_premium_keyboard
 
 from database.session import AsyncSessionLocal
 from services.interview_service import interview_service
+from services.payment_service import payment_service
 from services.subscription_service import subscription_service
 from services.user_service import user_service
 
@@ -40,7 +42,8 @@ async def profile_handler(
         else 'Не указан'
     )
 
-    if subscription_service.is_premium_active(user):
+    premium_active = subscription_service.is_premium_active(user)
+    if premium_active:
         expires_at = subscription_service.get_premium_expires_at(user)
         subscription = (
             f'PREMIUM до {expires_at:%d.%m.%Y}'
@@ -66,4 +69,16 @@ async def profile_handler(
         f'{statistics["best_score"]}/100'
     )
 
-    await message.answer(response)
+    if premium_active:
+        await message.answer(response)
+        return
+
+    price = payment_service.format_price_text()
+    response += (
+        f'\n\nМожно оформить PREMIUM за {price} '
+        'и убрать лимит на собеседования.'
+    )
+    await message.answer(
+        response,
+        reply_markup=create_buy_premium_keyboard(),
+    )
