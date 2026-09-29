@@ -283,6 +283,43 @@ class InterviewService:
             user_id=user_id
         )
 
+    async def get_statistics(
+        self,
+        session: AsyncSession,
+        user_id: int,
+    ) -> dict[str, int | float]:
+        """Возвращает общую статистику собеседований пользователя."""
+
+        interviews = await self.get_history(
+            session=session,
+            user_id=user_id
+        )
+        if not interviews:
+            return {
+                'completed_count': 0,
+                'average_score': 0,
+                'best_score': 0
+            }
+
+        scores = [
+            interview.score
+            for interview in interviews
+            if interview.score is not None
+        ]
+
+        if not scores:
+            return {
+                'completed_count': len(interviews),
+                'average_score': 0,
+                'best_score': 0
+            }
+
+        return {
+            'completed_count': len(interviews),
+            'average_score': round(sum(scores) / len(scores)),
+            'best_score': max(scores)
+        }
+        
     async def interrupted_interview(
         self,
         session: AsyncSession,
