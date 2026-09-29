@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Вход{% endblock %}
+{% block content %}
+<section class="login-wrap">
+  <form class="login-card" method="post" action="/admin/login">
+    <h1>Админка</h1>
+    <p class="muted">AI Interviewer</p>
+    {% if error %}
+    <div class="alert">{{ error }}</div>
+    {% endif %}
+    <label>
+      Логин
+      <input type="text" name="username" required autofocus>
+    </label>
+    <label>
+      Пароль
+      <input type="password" name="password" required>
+    </label>
+    <button type="submit">Войти</button>
+  </form>
+</section>
+{% endblock %}

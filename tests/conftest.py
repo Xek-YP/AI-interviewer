@@ -1,5 +1,6 @@
 import inspect
 import os
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -15,7 +16,7 @@ os.environ.setdefault("POSTGRES_DB", "test_db")
 os.environ.setdefault("POSTGRES_SERVER", "localhost")
 os.environ.setdefault("POSTGRES_PORT", "5432")
 
-from database.enums import Difficulty, InterviewStatus  # noqa: E402
+from database.enums import Difficulty, InterviewStatus, SubscriptionType  # noqa: E402
 from database.models import Interview, InterviewQuestion, User, UserAnswer  # noqa: E402
 from schemas.answer import AnswerEvaluation  # noqa: E402
 from schemas.interview import InterviewEvaluation, InterviewRequestValidation  # noqa: E402
@@ -38,6 +39,21 @@ def user():
         telegram_id=12345,
         first_name="Ivan",
         username="ivan",
+        subscription_type=SubscriptionType.FREE,
+        is_blocked=False,
+    )
+
+
+@pytest.fixture
+def premium_user():
+    return User(
+        id=2,
+        telegram_id=54321,
+        first_name="Petr",
+        username="petr",
+        subscription_type=SubscriptionType.PREMIUM,
+        subscription_started_at=datetime(2026, 9, 15, tzinfo=timezone.utc),
+        is_blocked=False,
     )
 
 

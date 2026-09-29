@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database.repositories.interview_repository import interview_repository
 from database.repositories.interview_question_repository import interview_question_repository
 from database.repositories.user_answer_repository import user_answer_repository
-from database.models import InterviewQuestion, UserAnswer, Interview
+from database.models import InterviewQuestion, UserAnswer, Interview, User
 from database.enums import Difficulty, InterviewStatus
 from exceptions import (
     AlreadyAnsweredError,
@@ -19,6 +19,7 @@ from exceptions import (
 from schemas.answer import SubmitAnswerResult
 from schemas.interview import InterviewEvaluation
 from .llm_service import llm_service
+from .subscription_service import subscription_service
 
 
 class InterviewService:
@@ -90,7 +91,7 @@ class InterviewService:
     async def start_interview(
         self,
         session: AsyncSession,
-        user_id: int,
+        user: User,
         difficulty: Difficulty,
         position: str,
         requirements: str,
@@ -98,6 +99,11 @@ class InterviewService:
     ) -> InterviewQuestion:
         """Создаёт собеседование и пул вопросов в БД, возвращает 1 вопрос."""
         try:
+            await subscription_service.ensure_can_start_interview(
+                session=session,
+                user=user,
+            )
+
             validation = await llm_service.validate_interview_request(
                 position=position,
                 requirements=requirements
@@ -108,7 +114,7 @@ class InterviewService:
 
             active_interview = await interview_repository.get_active_by_user_id(
                 session=session,
-                user_id=user_id
+                user_id=user.id
             )
 
             if active_interview:
@@ -120,7 +126,7 @@ class InterviewService:
 
             interview = await interview_repository.create(
                 session=session,
-                user_id=user_id,
+                user_id=user.id,
                 difficulty=difficulty,
                 position=position,
                 requirements=requirements,

@@ -79,3 +79,35 @@ async def test_get_user_not_found(service, session):
     ):
         with pytest.raises(ValueError, match="telegram_id"):
             await service.get_user(session, telegram_id=999)
+
+
+@pytest.mark.asyncio
+async def test_get_user_blocked(service, session, user):
+    """Заблокированный пользователь не может пользоваться ботом."""
+    from exceptions import UserBlockedError
+
+    user.is_blocked = True
+    with patch(
+        "services.user_service.user_repository.get_by_telegram_id",
+        AsyncMock(return_value=user),
+    ):
+        with pytest.raises(UserBlockedError, match="заблокирован"):
+            await service.get_user(session, telegram_id=12345)
+
+
+@pytest.mark.asyncio
+async def test_register_blocked_user(service, session, user):
+    """Повторный /start для заблокированного пользователя запрещён."""
+    from exceptions import UserBlockedError
+
+    user.is_blocked = True
+    with patch(
+        "services.user_service.user_repository.get_by_telegram_id",
+        AsyncMock(return_value=user),
+    ):
+        with pytest.raises(UserBlockedError, match="заблокирован"):
+            await service.register_user(
+                session,
+                telegram_id=12345,
+                first_name="Ivan",
+            )

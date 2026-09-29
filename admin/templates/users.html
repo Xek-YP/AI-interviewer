@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Пользователи{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Пользователи</h1>
+  <p class="muted">{{ users|length }} записей</p>
+</header>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Имя</th>
+      <th>Telegram</th>
+      <th>Подписка</th>
+      <th>Статус</th>
+      <th>Регистрация</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td><a href="/admin/users/{{ user.id }}">{{ user.id }}</a></td>
+      <td>{{ user.first_name }}</td>
+      <td>
+        {{ user.telegram_id }}
+        {% if user.username %}<br><span class="muted">@{{ user.username }}</span>{% endif %}
+      </td>
+      <td>
+        {% if subscription_service.is_premium_active(user) %}
+          <span class="badge badge-premium">PREMIUM</span>
+        {% else %}
+          <span class="badge">FREE</span>
+        {% endif %}
+      </td>
+      <td>
+        {% if user.is_blocked %}
+          <span class="badge badge-danger">Заблокирован</span>
+        {% else %}
+          <span class="badge badge-ok">Активен</span>
+        {% endif %}
+      </td>
+      <td>{{ user.created_at.strftime('%d.%m.%Y') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="muted">Пользователей пока нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

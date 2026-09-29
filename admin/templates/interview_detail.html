@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Собеседование #{{ interview.id }}{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <a class="back" href="/admin/interviews">← К списку</a>
+    <h1>{{ interview.position }}</h1>
+    <p class="muted">
+      #{{ interview.id }} ·
+      <a href="/admin/users/{{ interview.user_id }}">
+        {{ interview.user.first_name if interview.user else interview.user_id }}
+      </a>
+      · {{ interview.status.value }}
+      · {{ interview.difficulty.value }}
+    </p>
+  </div>
+</header>
+
+<section class="panel">
+  <h2>Параметры</h2>
+  <dl class="meta">
+    <div><dt>Требования</dt><dd>{{ interview.requirements }}</dd></div>
+    <div><dt>Итоговая оценка</dt><dd>{% if interview.score is not none %}{{ interview.score }}/100{% else %}—{% endif %}</dd></div>
+    <div><dt>Рекомендация</dt><dd>{{ interview.recommendation or '—' }}</dd></div>
+    <div><dt>Summary</dt><dd>{{ interview.summary or '—' }}</dd></div>
+    <div><dt>Сильные стороны</dt><dd><pre>{{ interview.strengths or '—' }}</pre></dd></div>
+    <div><dt>Слабые стороны</dt><dd><pre>{{ interview.weaknesses or '—' }}</pre></dd></div>
+  </dl>
+</section>
+
+{% for question in questions %}
+<section class="panel qa-card">
+  <h2>Вопрос {{ question.order_number }} · {{ question.category }}</h2>
+  <p class="question">{{ question.question_text }}</p>
+
+  {% if question.answer %}
+  <div class="answer-block">
+    <h3>Ответ кандидата</h3>
+    <pre>{{ question.answer.answer_text }}</pre>
+    <div class="score-row">
+      <span class="badge badge-score">Оценка LLM: {{ question.answer.score }}/100</span>
+      {% if question.answer.confidence is not none %}
+      <span class="muted">confidence: {{ '%.2f'|format(question.answer.confidence) }}</span>
+      {% endif %}
+    </div>
+    <div class="grid-2">
+      <div>
+        <h4>Сильные стороны</h4>
+        <pre>{{ question.answer.strengths }}</pre>
+      </div>
+      <div>
+        <h4>Слабые стороны</h4>
+        <pre>{{ question.answer.weaknesses }}</pre>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <p class="muted">Ответа ещё нет</p>
+  {% endif %}
+</section>
+{% endfor %}
+{% endblock %}

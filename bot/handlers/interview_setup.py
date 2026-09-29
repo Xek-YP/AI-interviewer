@@ -13,8 +13,9 @@ from bot.keyboards.interview_keyboard import create_interview_keyboard
 from bot.states.interview import InterviewStates
 
 from database.session import AsyncSessionLocal
-from exceptions import InvalidInterviewRequestError
+from exceptions import InterviewLimitExceededError, InvalidInterviewRequestError
 from services.interview_service import interview_service
+from services.subscription_service import subscription_service
 from services.user_service import user_service
 
 
@@ -30,6 +31,19 @@ async def start_interview_handler(
     state: FSMContext,
 ):
     """Запуск создания интервью."""
+
+    if message.from_user is None:
+        return
+
+    async with AsyncSessionLocal() as session:
+        user = await user_service.get_user(
+            session=session,
+            telegram_id=message.from_user.id,
+        )
+        await subscription_service.ensure_can_start_interview(
+            session=session,
+            user=user,
+        )
 
     await state.set_state(
         InterviewStates.waiting_position
@@ -151,7 +165,7 @@ async def difficulty_handler(
 
             question = await interview_service.start_interview(
                 session=session,
-                user_id=user.id,
+                user=user,
                 difficulty=difficulty,
                 position=position,
                 requirements=requirements,
@@ -169,6 +183,14 @@ async def difficulty_handler(
 
         await message.answer(
             'Введите данные должности заново.'
+        )
+        return
+
+    except InterviewLimitExceededError as e:
+        await state.clear()
+        await message.answer(
+            str(e),
+            reply_markup=MAIN_KEYBOARD,
         )
         return
 

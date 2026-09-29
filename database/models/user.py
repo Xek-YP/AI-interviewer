@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import BIGINT, DateTime, Integer, String, Enum
+from sqlalchemy import BIGINT, Boolean, DateTime, Integer, String, Enum
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.sql import func
 
@@ -37,6 +37,16 @@ class User(Base):
         Enum(SubscriptionType),
         default=SubscriptionType.FREE,
         nullable=False
+    )
+    subscription_started_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    is_blocked: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        server_default='false',
+        nullable=False,
     )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Промпты{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Промпты LLM</h1>
+  <p class="muted">Изменения применяются сразу для новых запросов</p>
+</header>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>Ключ</th>
+      <th>Название</th>
+      <th>Обновлён</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for prompt in prompts %}
+    <tr>
+      <td><code>{{ prompt.key }}</code></td>
+      <td>{{ prompt.title }}</td>
+      <td>{{ prompt.updated_at.strftime('%d.%m.%Y %H:%M') }}</td>
+      <td><a href="/admin/prompts/{{ prompt.key }}">Редактировать</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

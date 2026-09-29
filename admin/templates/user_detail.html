@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}Пользователь #{{ user.id }}{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <a class="back" href="/admin/users">← К списку</a>
+    <h1>{{ user.first_name }}</h1>
+    <p class="muted">ID {{ user.id }} · Telegram {{ user.telegram_id }}</p>
+  </div>
+</header>
+
+<section class="grid-2">
+  <div class="panel">
+    <h2>Подписка</h2>
+    <p>
+      Сейчас:
+      {% if subscription_service.is_premium_active(user) %}
+        <strong>PREMIUM</strong>
+        {% set expires = subscription_service.get_premium_expires_at(user) %}
+        {% if expires %} до {{ expires.strftime('%d.%m.%Y %H:%M') }} UTC{% endif %}
+      {% else %}
+        <strong>FREE</strong>
+      {% endif %}
+    </p>
+    <form method="post" action="/admin/users/{{ user.id }}/subscription" class="inline-form">
+      <select name="subscription_type">
+        {% for item in subscription_types %}
+        <option value="{{ item.value }}" {% if user.subscription_type == item %}selected{% endif %}>
+          {{ item.value.upper() }}
+        </option>
+        {% endfor %}
+      </select>
+      <button type="submit">Сохранить подписку</button>
+    </form>
+    <p class="hint">При выборе PREMIUM отсчёт 30 дней начинается заново с текущего момента.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Доступ</h2>
+    <p>
+      Статус:
+      {% if user.is_blocked %}
+        <span class="badge badge-danger">Заблокирован</span>
+      {% else %}
+        <span class="badge badge-ok">Активен</span>
+      {% endif %}
+    </p>
+    <form method="post" action="/admin/users/{{ user.id }}/block">
+      {% if user.is_blocked %}
+      <button type="submit" class="btn-ok">Разблокировать</button>
+      {% else %}
+      <button type="submit" class="btn-danger">Заблокировать</button>
+      {% endif %}
+    </form>
+  </div>
+</section>
+
+<section class="panel">
+  <h2>Собеседования</h2>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Должность</th>
+        <th>Статус</th>
+        <th>Оценка</th>
+        <th>Дата</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for interview in interviews %}
+      <tr>
+        <td><a href="/admin/interviews/{{ interview.id }}">{{ interview.id }}</a></td>
+        <td>{{ interview.position }}</td>
+        <td>{{ interview.status.value }}</td>
+        <td>{% if interview.score is not none %}{{ interview.score }}{% else %}—{% endif %}</td>
+        <td>{{ interview.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">Собеседований нет</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endblock %}

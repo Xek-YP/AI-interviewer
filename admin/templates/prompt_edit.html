@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Промпт · {{ prompt.title }}{% endblock %}
+{% block content %}
+<header class="page-header">
+  <div>
+    <a class="back" href="/admin/prompts">← К списку</a>
+    <h1>{{ prompt.title }}</h1>
+    <p class="muted"><code>{{ prompt.key }}</code></p>
+  </div>
+</header>
+
+{% if saved %}
+<div class="alert alert-ok">Промпт сохранён</div>
+{% endif %}
+
+<form method="post" action="/admin/prompts/{{ prompt.key }}" class="panel">
+  <label>
+    Текст промпта
+    <textarea name="content" rows="28" required>{{ prompt.content }}</textarea>
+  </label>
+  <p class="hint">
+    Сохраняйте плейсхолдеры вида <code>{position}</code>, <code>{requirements}</code>,
+    <code>{difficulty}</code>, <code>{max_questions}</code>, <code>{question}</code>,
+    <code>{answer}</code>, <code>{category}</code>, <code>{answers}</code>.
+  </p>
+  <button type="submit">Сохранить</button>
+</form>
+{% endblock %}

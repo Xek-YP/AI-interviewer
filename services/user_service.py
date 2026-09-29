@@ -4,6 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database.repositories.user_repository import user_repository
 from database.models import User
+from exceptions import UserBlockedError
+
 
 class UserService:
     """Сервис работы с пользователями."""
@@ -25,6 +27,10 @@ class UserService:
             session=session
         )
         if user:
+            if user.is_blocked:
+                raise UserBlockedError(
+                    'Ваш аккаунт заблокирован. Обратитесь к администратору.'
+                )
             user.username = username
             user.first_name = first_name
             user.last_activity_at = datetime.now(timezone.utc)
@@ -38,7 +44,7 @@ class UserService:
             await session.flush()
         await session.commit()
         return user
-    
+
     async def get_user(
         self,
         session: AsyncSession,
@@ -51,6 +57,11 @@ class UserService:
         )
         if not user:
             raise ValueError('Пользователя с таким telegram_id нет.')
+        if user.is_blocked:
+            raise UserBlockedError(
+                'Ваш аккаунт заблокирован. Обратитесь к администратору.'
+            )
         return user
+
 
 user_service = UserService()

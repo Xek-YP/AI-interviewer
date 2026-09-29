@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Собеседования{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Собеседования</h1>
+  <p class="muted">Последние {{ interviews|length }}</p>
+</header>
+
+<table class="table">
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Пользователь</th>
+      <th>Должность</th>
+      <th>Сложность</th>
+      <th>Статус</th>
+      <th>Оценка</th>
+      <th>Дата</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for interview in interviews %}
+    <tr>
+      <td><a href="/admin/interviews/{{ interview.id }}">{{ interview.id }}</a></td>
+      <td>
+        <a href="/admin/users/{{ interview.user_id }}">
+          {{ interview.user.first_name if interview.user else interview.user_id }}
+        </a>
+      </td>
+      <td>{{ interview.position }}</td>
+      <td>{{ interview.difficulty.value }}</td>
+      <td>{{ interview.status.value }}</td>
+      <td>{% if interview.score is not none %}{{ interview.score }}{% else %}—{% endif %}</td>
+      <td>{{ interview.created_at.strftime('%d.%m.%Y %H:%M') }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7" class="muted">Собеседований пока нет</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

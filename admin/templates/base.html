@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Admin{% endblock %} · AI Interviewer</title>
+  <link rel="stylesheet" href="/static/admin.css">
+</head>
+<body>
+  {% if request.session.get('admin_authenticated') %}
+  <aside class="sidebar">
+    <div class="brand">AI Interviewer</div>
+    <nav>
+      <a href="/admin/users" class="{% if active_page == 'users' %}active{% endif %}">Пользователи</a>
+      <a href="/admin/interviews" class="{% if active_page == 'interviews' %}active{% endif %}">Собеседования</a>
+      <a href="/admin/prompts" class="{% if active_page == 'prompts' %}active{% endif %}">Промпты</a>
+    </nav>
+    <form method="post" action="/admin/logout" class="logout-form">
+      <button type="submit">Выйти</button>
+    </form>
+  </aside>
+  {% endif %}
+  <main class="content {% if not request.session.get('admin_authenticated') %}content-full{% endif %}">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -6,6 +6,7 @@ from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import database  # noqa: F401 — регистрация моделей в metadata
 from database import Base
 from config.settings import settings
 

@@ -113,17 +113,23 @@ async def test_get_history_delegates_to_repository(service, session, interview):
 
 @pytest.mark.asyncio
 async def test_start_interview_invalid_request(
-    service, session, invalid_validation
+    service, session, user, invalid_validation
 ):
     """Старт собеседования отклоняется при невалидной вакансии."""
-    with patch(
-        "services.interview_service.llm_service.validate_interview_request",
-        AsyncMock(return_value=invalid_validation),
+    with (
+        patch(
+            "services.interview_service.subscription_service.ensure_can_start_interview",
+            AsyncMock(),
+        ),
+        patch(
+            "services.interview_service.llm_service.validate_interview_request",
+            AsyncMock(return_value=invalid_validation),
+        ),
     ):
         with pytest.raises(InvalidInterviewRequestError, match="Не вакансия"):
             await service.start_interview(
                 session=session,
-                user_id=1,
+                user=user,
                 difficulty=Difficulty.JUNIOR,
                 position="asdf",
                 requirements="qwerty",
@@ -135,10 +141,14 @@ async def test_start_interview_invalid_request(
 
 @pytest.mark.asyncio
 async def test_start_interview_success(
-    service, session, question, question_pool, interview, valid_validation
+    service, session, user, question, question_pool, interview, valid_validation
 ):
     """Успешный старт создаёт интервью, пул вопросов и возвращает первый вопрос."""
     with (
+        patch(
+            "services.interview_service.subscription_service.ensure_can_start_interview",
+            AsyncMock(),
+        ),
         patch(
             "services.interview_service.llm_service.validate_interview_request",
             AsyncMock(return_value=valid_validation),
@@ -162,7 +172,7 @@ async def test_start_interview_success(
     ):
         result = await service.start_interview(
             session=session,
-            user_id=1,
+            user=user,
             difficulty=Difficulty.MIDDLE,
             position="Python Backend",
             requirements="FastAPI",
@@ -176,7 +186,7 @@ async def test_start_interview_success(
 
 @pytest.mark.asyncio
 async def test_start_interview_interrupts_active(
-    service, session, question, question_pool, interview, valid_validation
+    service, session, user, question, question_pool, interview, valid_validation
 ):
     """При новом старте активное собеседование помечается как прерванное."""
     active = MagicMock()
@@ -184,6 +194,10 @@ async def test_start_interview_interrupts_active(
     active.completed_at = None
 
     with (
+        patch(
+            "services.interview_service.subscription_service.ensure_can_start_interview",
+            AsyncMock(),
+        ),
         patch(
             "services.interview_service.llm_service.validate_interview_request",
             AsyncMock(return_value=valid_validation),
@@ -211,7 +225,7 @@ async def test_start_interview_interrupts_active(
     ):
         await service.start_interview(
             session=session,
-            user_id=1,
+            user=user,
             difficulty=Difficulty.MIDDLE,
             position="Python Backend",
             requirements="FastAPI",
@@ -225,10 +239,14 @@ async def test_start_interview_interrupts_active(
 
 @pytest.mark.asyncio
 async def test_start_interview_empty_pool_raises(
-    service, session, interview, valid_validation
+    service, session, user, interview, valid_validation
 ):
     """Старт падает с ошибкой LLM, если пул вопросов пустой."""
     with (
+        patch(
+            "services.interview_service.subscription_service.ensure_can_start_interview",
+            AsyncMock(),
+        ),
         patch(
             "services.interview_service.llm_service.validate_interview_request",
             AsyncMock(return_value=valid_validation),
@@ -248,10 +266,32 @@ async def test_start_interview_empty_pool_raises(
         with pytest.raises(LLMServiceError):
             await service.start_interview(
                 session=session,
-                user_id=1,
+                user=user,
                 difficulty=Difficulty.MIDDLE,
                 position="Python",
                 requirements="Django",
+                max_questions=10,
+            )
+
+    session.rollback.assert_awaited()
+
+
+@pytest.mark.asyncio
+async def test_start_interview_limit_exceeded(service, session, user):
+    """Старт блокируется, если исчерпан лимит FREE-подписки."""
+    from exceptions import InterviewLimitExceededError
+
+    with patch(
+        "services.interview_service.subscription_service.ensure_can_start_interview",
+        AsyncMock(side_effect=InterviewLimitExceededError("лимит")),
+    ):
+        with pytest.raises(InterviewLimitExceededError, match="лимит"):
+            await service.start_interview(
+                session=session,
+                user=user,
+                difficulty=Difficulty.MIDDLE,
+                position="Python Backend",
+                requirements="FastAPI",
                 max_questions=10,
             )
 

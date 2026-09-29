@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     postgres_server: str
     postgres_port: int = 5432
 
+    admin_username: str = 'admin'
+    admin_password: SecretStr = SecretStr('admin')
+    admin_secret_key: SecretStr = SecretStr('change-me-admin-secret')
+    admin_host: str = '127.0.0.1'
+    admin_port: int = 8000
+
     @property
     def database_url(self) -> str:
         """Строка подключения к БД."""
@@ -29,8 +35,9 @@ class Settings(BaseSettings):
         )
 
     model_config = SettingsConfigDict(
-        env_file= '.env',
+        env_file='.env',
         extra='forbid',
     )
+
 
 settings = Settings()

@@ -12,9 +12,14 @@ from openai import (
 from pydantic import ValidationError
 
 from constants.interview import (
-    ANSWER_PROMPT, INTERVIEW_EVALUATION_PROMPT, INTERVIEW_VALIDATION_PROMPT,
-    QUESTION_POOL_PROMPT, DEEPSEEK_BASE_URL,
+    DEEPSEEK_BASE_URL,
     MAX_LLM_ATTEMPTS, LLM_RETRY_DELAY
+)
+from constants.prompts import (
+    PROMPT_ANSWER,
+    PROMPT_INTERVIEW_EVALUATION,
+    PROMPT_INTERVIEW_VALIDATION,
+    PROMPT_QUESTION_POOL,
 )
 from config.settings import settings
 from database.enums import Difficulty
@@ -27,6 +32,7 @@ from exceptions.llm_exception import (
 from schemas.answer import AnswerEvaluation
 from schemas.interview import InterviewEvaluation, InterviewRequestValidation
 from schemas.interview_question import InterviewQuestionPool
+from services.prompt_service import prompt_service
 
 
 class LLMService:
@@ -143,7 +149,8 @@ class LLMService:
     ) -> InterviewQuestionPool:
         """Генерирует пул вопрос для технического собеседования."""
 
-        prompt = QUESTION_POOL_PROMPT.format(
+        prompt_template = await prompt_service.get_content(PROMPT_QUESTION_POOL)
+        prompt = prompt_template.format(
             difficulty=difficulty.value,
             position=position,
             requirements=requirements,
@@ -199,7 +206,8 @@ class LLMService:
     ) -> AnswerEvaluation:
         """Оценивает ответ пользователя на поставленный ему вопрос."""
 
-        prompt = ANSWER_PROMPT.format(
+        prompt_template = await prompt_service.get_content(PROMPT_ANSWER)
+        prompt = prompt_template.format(
             question=question,
             answer=answer,
             position=position,
@@ -249,7 +257,10 @@ class LLMService:
     ) -> InterviewEvaluation:
         """Оценивает кандидата после завершения собеседовнаия."""
 
-        prompt = INTERVIEW_EVALUATION_PROMPT.format(
+        prompt_template = await prompt_service.get_content(
+            PROMPT_INTERVIEW_EVALUATION
+        )
+        prompt = prompt_template.format(
             position=position,
             requirements=requirements,
             difficulty=difficulty.value,
@@ -292,7 +303,10 @@ class LLMService:
     ) -> InterviewRequestValidation:
         """Проверяет корректность данных вакансии."""
 
-        prompt = INTERVIEW_VALIDATION_PROMPT.format(
+        prompt_template = await prompt_service.get_content(
+            PROMPT_INTERVIEW_VALIDATION
+        )
+        prompt = prompt_template.format(
             position=position,
             requirements=requirements,
         )
