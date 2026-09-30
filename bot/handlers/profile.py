@@ -28,8 +28,10 @@ async def profile_handler(
             session=session,
             telegram_id=message.from_user.id,
         )
-        subscription_service.expire_premium_if_needed(user=user)
-        await session.commit()
+        await subscription_service.sync_subscription_status(
+            session=session,
+            user=user,
+        )
 
         statistics = await interview_service.get_statistics(
             session=session,

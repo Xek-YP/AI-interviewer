@@ -51,6 +51,12 @@ class PaymentService:
             return f'{settings.premium_price_stars} ⭐'
         return f'{settings.premium_price_stars} {settings.payment_currency}'
 
+    def format_monthly_price_text(self) -> str:
+        """Цена Premium для первого экрана, например «250 Stars»."""
+        if settings.payment_currency.upper() == 'XTR':
+            return f'{settings.premium_price_stars} Stars'
+        return f'{settings.premium_price_stars} {settings.payment_currency}'
+
     async def create_pending_payment(
         self,
         session: AsyncSession,

@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from pydantic.types import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -23,23 +25,38 @@ class Settings(BaseSettings):
     admin_host: str = '127.0.0.1'
     admin_port: int = 8000
 
-    # Оплата PREMIUM через Telegram Stars (XTR).
     premium_price_stars: int = 100
-    # Для обычных платежей (ЮKassa и т.п.) можно задать токен провайдера.
-    # Для Stars оставьте пустым.
     payment_provider_token: str = ''
     payment_currency: str = 'XTR'
+
+    redis_host: str = 'localhost'
+    redis_port: int = 6379
+    redis_db: int = 0
+    redis_password: SecretStr | None = None
 
     @property
     def database_url(self) -> str:
         """Строка подключения к БД."""
+        user = quote(self.postgres_user, safe='')
+        password = quote(self.postgres_password.get_secret_value(), safe='')
+        database = quote(self.postgres_db, safe='')
         return (
-            f'postgresql+asyncpg://{self.postgres_user}'
-            f':{self.postgres_password.get_secret_value()}'
-            f'@{self.postgres_server}'
-            f':{self.postgres_port}'
-            f'/{self.postgres_db}'
+            f'postgresql+asyncpg://{user}:{password}'
+            f'@{self.postgres_server}:{self.postgres_port}/{database}'
         )
+
+    @property
+    def redis_url(self) -> str:
+        """Строка подключения к Redis для FSM."""
+        if self.redis_password is not None:
+            password = self.redis_password.get_secret_value()
+            if password:
+                encoded = quote(password, safe='')
+                return (
+                    f'redis://:{encoded}'
+                    f'@{self.redis_host}:{self.redis_port}/{self.redis_db}'
+                )
+        return f'redis://{self.redis_host}:{self.redis_port}/{self.redis_db}'
 
     model_config = SettingsConfigDict(
         env_file='.env',

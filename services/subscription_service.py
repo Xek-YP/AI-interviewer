@@ -70,16 +70,32 @@ class SubscriptionService:
         self,
         user: User,
         now: datetime | None = None,
-    ) -> User:
-        """Сбрасывает PREMIUM на FREE, если срок 30 дней истёк."""
+    ) -> bool:
+        """
+        Сбрасывает PREMIUM на FREE, если срок 30 дней истёк.
+
+        Returns:
+            True, если подписка была сброшена.
+        """
         if user.subscription_type != SubscriptionType.PREMIUM:
-            return user
+            return False
 
         if self.is_premium_active(user=user, now=now):
-            return user
+            return False
 
         user.subscription_type = SubscriptionType.FREE
         user.subscription_started_at = None
+        return True
+
+    async def sync_subscription_status(
+        self,
+        session: AsyncSession,
+        user: User,
+        now: datetime | None = None,
+    ) -> User:
+        """Синхронизирует статус подписки с БД (истечение PREMIUM)."""
+        if self.expire_premium_if_needed(user=user, now=now):
+            await session.commit()
         return user
 
     def _current_month_bounds(
@@ -125,7 +141,7 @@ class SubscriptionService:
         now: datetime | None = None,
     ) -> bool:
         """Проверяет, может ли пользователь начать новое собеседование."""
-        self.expire_premium_if_needed(user=user, now=now)
+        await self.sync_subscription_status(session=session, user=user, now=now)
 
         if self.is_premium_active(user=user, now=now):
             return True
@@ -149,7 +165,8 @@ class SubscriptionService:
 
         raise InterviewLimitExceededError(
             'На бесплатном тарифе доступно только '
-            f'{FREE_MONTHLY_INTERVIEW_LIMIT} собеседования в месяц.\n'
+            f'{FREE_MONTHLY_INTERVIEW_LIMIT} собеседования '
+            'за календарный месяц.\n'
             f'Оформите PREMIUM на {PREMIUM_DURATION_DAYS} дней '
             'через кнопку «💎 PREMIUM», '
             'чтобы проходить собеседования без ограничений.'

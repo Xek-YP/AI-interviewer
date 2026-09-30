@@ -3,6 +3,18 @@ from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 import bot.keyboards.buttons_text as text
 
 
+def create_onboarding_keyboard() -> ReplyKeyboardMarkup:
+    """Первый экран: только запуск, без меню разделов."""
+    return ReplyKeyboardMarkup(
+        keyboard=[
+            [
+                KeyboardButton(text=text.START_INTERVIEW),
+            ],
+        ],
+        resize_keyboard=True,
+    )
+
+
 def create_main_keyboard() -> ReplyKeyboardMarkup:
     """Возвращает главную клавиатуру."""
     return ReplyKeyboardMarkup(

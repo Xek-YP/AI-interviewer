@@ -1,11 +1,11 @@
 from database.enums import Difficulty
 
-START_INTERVIEW = '🎤 Начать собеседование'
+START_INTERVIEW = 'Начать собеседование'
 VIEW_HISTORY = '📈 История'
 PROFILE = '🧑 Профиль'
 HELP = '❗ Помощь'
 BUY_PREMIUM = '💎 PREMIUM'
-END_INTERVIEW = 'Звершить собеседование'
+END_INTERVIEW = 'Завершить собеседование'
 DIFFICULTY_BUTTONS = {
     'Junior': Difficulty.JUNIOR,
     'Middle': Difficulty.MIDDLE,

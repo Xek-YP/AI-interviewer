@@ -23,7 +23,7 @@ from .subscription_service import subscription_service
 
 
 class InterviewService:
-    """Сервис работы с собеседовнаием."""
+    """Сервис работы с собеседованием."""
 
     async def _create_questions_pool(
         self,
@@ -55,7 +55,7 @@ class InterviewService:
         self,
         answers: list[UserAnswer]
     ) -> str:
-        """Преобразовывает список ответов пользователя в понятный текст."""
+        """Преобразует список ответов пользователя в понятный текст."""
         result = []
 
         for index, answer in enumerate(answers, start=1):
@@ -83,10 +83,28 @@ class InterviewService:
         self,
         answers: list[UserAnswer],
     ) -> int:
-        """Расчитывает итоговую оценку за собеседование."""
+        """Рассчитывает итоговую оценку за собеседование."""
         if not answers:
             return 0
         return round(sum(answer.score for answer in answers)/len(answers))
+
+    async def get_active_question_for_resume(
+        self,
+        session: AsyncSession,
+        user_id: int,
+    ) -> InterviewQuestion | None:
+        """Возвращает текущий неотвеченный вопрос активного интервью."""
+        interview = await interview_repository.get_active_by_user_id(
+            session=session,
+            user_id=user_id,
+        )
+        if not interview:
+            return None
+
+        return await interview_question_repository.get_unanswered_by_interview_id(
+            session=session,
+            interview_id=interview.id,
+        )
 
     async def start_interview(
         self,
@@ -143,7 +161,7 @@ class InterviewService:
                 max_questions=max_questions
             )
             if not questions:
-                raise LLMServiceError('LLM не сгенирировала ни 1-го вопроса.')
+                raise LLMServiceError('LLM не сгенерировала ни одного вопроса.')
             interview.question_count = len(questions)
             await session.commit()
 

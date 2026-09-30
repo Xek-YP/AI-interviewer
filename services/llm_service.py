@@ -292,7 +292,7 @@ class LLMService:
             return InterviewEvaluation.model_validate(data)
         except (json.JSONDecodeError, ValidationError) as e:
             raise LLMServiceError(
-                'LLM вернула конечную оценку не праильной формы.'
+                'LLM вернула конечную оценку неправильной формы.'
             ) from e
 
 

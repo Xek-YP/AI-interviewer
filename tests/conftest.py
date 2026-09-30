@@ -15,6 +15,7 @@ os.environ.setdefault("POSTGRES_PASSWORD", "test")
 os.environ.setdefault("POSTGRES_DB", "test_db")
 os.environ.setdefault("POSTGRES_SERVER", "localhost")
 os.environ.setdefault("POSTGRES_PORT", "5432")
+os.environ.setdefault("REDIS_DB", "0")
 
 from database.enums import Difficulty, InterviewStatus, SubscriptionType  # noqa: E402
 from database.models import Interview, InterviewQuestion, User, UserAnswer  # noqa: E402

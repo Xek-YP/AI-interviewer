@@ -132,6 +132,20 @@ class InterviewRepository:
         """Обновляет данные собеседования в БД."""
         session.add(interview)
 
+    async def count_by_user_id(
+        self,
+        session: AsyncSession,
+        user_id: int,
+    ) -> int:
+        """Считает все собеседования пользователя."""
+        stmt = (
+            select(func.count())
+            .select_from(Interview)
+            .where(Interview.user_id == user_id)
+        )
+        result = await session.execute(stmt)
+        return int(result.scalar_one())
+
     async def count_created_in_period(
         self,
         session: AsyncSession,

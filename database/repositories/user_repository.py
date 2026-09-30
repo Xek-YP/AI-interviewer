@@ -15,7 +15,7 @@ class UserRepository:
         username: str | None,
         first_name: str
     ) -> User:
-        """Создаёт нового пользователея в БД."""
+        """Создаёт нового пользователя в БД."""
         user = User(
             telegram_id=telegram_id,
             username=username,

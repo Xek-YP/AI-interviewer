@@ -9,7 +9,6 @@ from aiogram.types import (
 )
 
 from bot.keyboards.buttons_text import BUY_PREMIUM, BUY_PREMIUM_CALLBACK
-from bot.keyboards.payment_keyboard import create_buy_premium_keyboard
 from config.settings import settings
 from constants.subscription import (
     PREMIUM_DESCRIPTION,
@@ -44,9 +43,29 @@ async def send_premium_invoice(bot: Bot, chat_id: int, user_id: int) -> None:
     )
 
 
+async def _reject_if_premium_active(message_or_callback_message, user) -> bool:
+    """True, если активный PREMIUM — повторная покупка запрещена."""
+    if not subscription_service.is_premium_active(user):
+        return False
+
+    expires_at = subscription_service.get_premium_expires_at(user)
+    expires_text = (
+        expires_at.strftime('%d.%m.%Y')
+        if expires_at
+        else 'конца текущего срока'
+    )
+    await message_or_callback_message.answer(
+        'У вас уже активен PREMIUM '
+        f'до {expires_text}.\n'
+        'Повторная покупка недоступна, пока действует текущая подписка.\n'
+        'Новую можно оформить после окончания срока.'
+    )
+    return True
+
+
 @router.message(F.text == BUY_PREMIUM)
 async def buy_premium_handler(message: Message, bot: Bot):
-    """Показывает оферту и сразу отправляет счёт на оплату."""
+    """Показывает оферту и отправляет счёт, если PREMIUM ещё нет."""
     if message.from_user is None:
         return
 
@@ -55,24 +74,12 @@ async def buy_premium_handler(message: Message, bot: Bot):
             session=session,
             telegram_id=message.from_user.id,
         )
-        subscription_service.expire_premium_if_needed(user=user)
-        await session.commit()
-
-        if subscription_service.is_premium_active(user):
-            expires_at = subscription_service.get_premium_expires_at(user)
-            expires_text = (
-                expires_at.strftime('%d.%m.%Y')
-                if expires_at
-                else 'конца срока'
-            )
-            await message.answer(
-                'У вас уже активен PREMIUM '
-                f'до {expires_text}.\n'
-                'Можно продлить подписку — новый срок добавится к текущему.',
-                reply_markup=create_buy_premium_keyboard(),
-            )
+        await subscription_service.sync_subscription_status(
+            session=session,
+            user=user,
+        )
+        if await _reject_if_premium_active(message, user):
             return
-
         user_id = user.id
 
     price = payment_service.format_price_text()
@@ -89,6 +96,9 @@ async def buy_premium_handler(message: Message, bot: Bot):
                 session=session,
                 telegram_id=message.from_user.id,
             )
+            if subscription_service.is_premium_active(user):
+                await _reject_if_premium_active(message, user)
+                return
             await payment_service.create_pending_payment(
                 session=session,
                 user=user,
@@ -99,8 +109,7 @@ async def buy_premium_handler(message: Message, bot: Bot):
         await message.answer(
             'Не удалось открыть оплату.\n'
             f'Причина: {e}\n\n'
-            'Проверьте, что в .env стоят PAYMENT_CURRENCY=XTR, '
-            'PREMIUM_PRICE_STARS > 0 и PAYMENT_PROVIDER_TOKEN пустой.'
+            'Проверьте настройки оплаты в .env.'
         )
 
 
@@ -111,9 +120,13 @@ async def buy_premium_callback(callback: CallbackQuery, bot: Bot):
         await callback.answer()
         return
 
-    await callback.answer('Открываю оплату...')
-
-    chat_id = callback.message.chat.id if callback.message else callback.from_user.id
+    await callback.answer()
+    target = callback.message
+    chat_id = (
+        callback.message.chat.id
+        if callback.message
+        else callback.from_user.id
+    )
 
     try:
         async with AsyncSessionLocal() as session:
@@ -121,6 +134,15 @@ async def buy_premium_callback(callback: CallbackQuery, bot: Bot):
                 session=session,
                 telegram_id=callback.from_user.id,
             )
+            await subscription_service.sync_subscription_status(
+                session=session,
+                user=user,
+            )
+            if target and await _reject_if_premium_active(target, user):
+                return
+            if subscription_service.is_premium_active(user):
+                return
+
             await payment_service.create_pending_payment(
                 session=session,
                 user=user,
@@ -130,10 +152,7 @@ async def buy_premium_callback(callback: CallbackQuery, bot: Bot):
         await send_premium_invoice(bot, chat_id, user_id)
     except (TelegramAPIError, ValueError) as e:
         logger.exception('Не удалось отправить invoice PREMIUM из callback')
-        text = (
-            'Не удалось открыть оплату.\n'
-            f'Причина: {e}'
-        )
+        text = f'Не удалось открыть оплату.\nПричина: {e}'
         if callback.message:
             await callback.message.answer(text)
         else:
@@ -142,13 +161,41 @@ async def buy_premium_callback(callback: CallbackQuery, bot: Bot):
 
 @router.pre_checkout_query()
 async def pre_checkout_handler(pre_checkout_query: PreCheckoutQuery):
-    """Подтверждает pre-checkout от Telegram перед списанием."""
+    """Подтверждает pre-checkout только если PREMIUM ещё не активен."""
     user_id = payment_service.parse_user_id(pre_checkout_query.invoice_payload)
-    ok = user_id is not None
-    await pre_checkout_query.answer(
-        ok=ok,
-        error_message=None if ok else 'Некорректный платёж. Попробуйте ещё раз.',
-    )
+    if user_id is None:
+        await pre_checkout_query.answer(
+            ok=False,
+            error_message='Некорректный платёж. Попробуйте ещё раз.',
+        )
+        return
+
+    async with AsyncSessionLocal() as session:
+        from database.repositories.user_repository import user_repository
+
+        user = await user_repository.get_by_id(session=session, user_id=user_id)
+        if user is None:
+            await pre_checkout_query.answer(
+                ok=False,
+                error_message='Пользователь не найден.',
+            )
+            return
+
+        await subscription_service.sync_subscription_status(
+            session=session,
+            user=user,
+        )
+        if subscription_service.is_premium_active(user):
+            await pre_checkout_query.answer(
+                ok=False,
+                error_message=(
+                    'PREMIUM уже активен. '
+                    'Дождитесь окончания текущей подписки.'
+                ),
+            )
+            return
+
+    await pre_checkout_query.answer(ok=True)
 
 
 @router.message(F.successful_payment)
@@ -161,7 +208,7 @@ async def successful_payment_handler(message: Message):
     payload_user_id = payment_service.parse_user_id(payment.invoice_payload)
     if payload_user_id is None:
         await message.answer(
-            'Оплата получена, но payload некорректный. '
+            'Оплата получена, но данные платежа некорректны. '
             'Напишите в поддержку.'
         )
         return
@@ -175,6 +222,18 @@ async def successful_payment_handler(message: Message):
             await message.answer(
                 'Оплата не совпала с вашим аккаунтом. '
                 'Напишите в поддержку.'
+            )
+            return
+
+        await subscription_service.sync_subscription_status(
+            session=session,
+            user=user,
+        )
+        if subscription_service.is_premium_active(user):
+            await message.answer(
+                'Оплата получена, но PREMIUM у вас уже был активен.\n'
+                'Подписка не продлевалась повторно. '
+                'Обратитесь в поддержку, если списание прошло ошибочно.'
             )
             return
 

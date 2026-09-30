@@ -7,6 +7,9 @@ python -m alembic upgrade head
 Чтобы проверить создались ли таблицы
 docker-compose exec db psql -U interview_user -d ai_interviewer -c "\dt"
 
+Для запуска инфраструктуры (Postgres + Redis)
+docker-compose up -d
+
 Для запуска бота и админки
 python main.py
 

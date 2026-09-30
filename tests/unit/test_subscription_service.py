@@ -75,8 +75,9 @@ def test_expire_premium_if_needed_resets_to_free(service, premium_user):
     premium_user.subscription_started_at = started_at
     now = started_at + timedelta(days=PREMIUM_DURATION_DAYS + 1)
 
-    service.expire_premium_if_needed(premium_user, now=now)
+    changed = service.expire_premium_if_needed(premium_user, now=now)
 
+    assert changed is True
     assert premium_user.subscription_type == SubscriptionType.FREE
     assert premium_user.subscription_started_at is None
 
