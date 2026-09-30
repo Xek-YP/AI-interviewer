@@ -33,6 +33,7 @@ from schemas.answer import AnswerEvaluation
 from schemas.interview import InterviewEvaluation, InterviewRequestValidation
 from schemas.interview_question import InterviewQuestionPool
 from services.prompt_service import prompt_service
+from services.usage_service import usage_service
 
 
 class LLMService:
@@ -56,6 +57,7 @@ class LLMService:
         attempts = 1
 
         while attempts <= MAX_LLM_ATTEMPTS:
+            await usage_service.reserve_llm_request()
             try:
                 response = await self.client.chat.completions.create(
                     model="deepseek-v4-flash",

@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_password: SecretStr | None = None
 
+    daily_llm_request_limit: int = 200
+
     @property
     def database_url(self) -> str:
         """Строка подключения к БД."""

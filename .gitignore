@@ -4,3 +4,4 @@ __pycache__/
 /pg_data
 /redis_data
 /logs
+/backups

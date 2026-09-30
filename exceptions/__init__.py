@@ -2,7 +2,8 @@ from .base import UserVisibleError
 from .interview_question_exception import QuestionNotFoundError
 from .llm_exception import (
     LLMServiceError, LLMTemporaryError,
-    LLMInsufficientBalanceError, LLMAuthenticationError
+    LLMInsufficientBalanceError, LLMAuthenticationError,
+    LlmBudgetExceededError,
 )
 from .interview_exception import (
     InterviewNotFoundOrInterraptedError, InterviewIsCompletedError,
