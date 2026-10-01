@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Статистика{% endblock %}
+{% block content %}
+<header class="page-header">
+  <h1>Статистика</h1>
+</header>
+
+<section class="panel">
+  <p class="stat-hero">{{ stats.users_total_line }}</p>
+</section>
+
+<div class="grid-2">
+  <section class="panel stat-block">
+    <h2>За сегодня</h2>
+    <div class="stat-list">
+      <p class="stat-plus">{{ stats.today_users_line }}</p>
+      <p class="stat-plus">{{ stats.today_interviews_line }}</p>
+      <p class="stat-plus">{{ stats.today_premium_line }}</p>
+    </div>
+  </section>
+  <section class="panel stat-block">
+    <h2>Всего</h2>
+    <div class="stat-list">
+      <p>{{ stats.total_users_line }}</p>
+      <p>{{ stats.total_interviews_line }}</p>
+      <p>{{ stats.total_premium_line }}</p>
+    </div>
+  </section>
+</div>
+
+<section class="panel stat-block">
+  <h2>Доход</h2>
+  <p class="stat-hero">{{ stats.revenue_line }}</p>
+</section>
+{% endblock %}

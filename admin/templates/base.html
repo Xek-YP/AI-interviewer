@@ -11,6 +11,7 @@
   <aside class="sidebar">
     <div class="brand">AI Interviewer</div>
     <nav>
+      <a href="/admin/stats" class="{% if active_page == 'stats' %}active{% endif %}">Статистика</a>
       <a href="/admin/users" class="{% if active_page == 'users' %}active{% endif %}">Пользователи</a>
       <a href="/admin/interviews" class="{% if active_page == 'interviews' %}active{% endif %}">Собеседования</a>
       <a href="/admin/prompts" class="{% if active_page == 'prompts' %}active{% endif %}">Промпты</a>

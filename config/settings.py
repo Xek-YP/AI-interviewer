@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     admin_secret_key: SecretStr = SecretStr('change-me-admin-secret')
     admin_host: str = '127.0.0.1'
     admin_port: int = 8000
+    stats_timezone: str = 'Europe/Moscow'
 
     premium_price_stars: int = 100
     payment_provider_token: str = ''

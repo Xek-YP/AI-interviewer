@@ -8,6 +8,7 @@ from database.repositories.interview_repository import interview_repository
 from database.repositories.user_repository import user_repository
 from database.session import get_async_session
 from services.prompt_service import prompt_service
+from services.stats_service import stats_service
 from services.subscription_service import subscription_service
 
 router = APIRouter()
@@ -64,6 +65,26 @@ async def admin_index(request: Request):
     if not request.session.get('admin_authenticated'):
         return RedirectResponse('/admin/login', status_code=303)
     return RedirectResponse('/admin/users', status_code=303)
+
+
+@router.get('/stats', response_class=HTMLResponse)
+async def stats_page(
+    request: Request,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Статистика пользователей, интервью и оплат."""
+    if not request.session.get('admin_authenticated'):
+        return RedirectResponse('/admin/login', status_code=303)
+
+    stats = await stats_service.collect(session=session)
+    return templates.TemplateResponse(
+        request,
+        'stats.html',
+        {
+            'stats': stats,
+            'active_page': 'stats',
+        },
+    )
 
 
 @router.get('/users', response_class=HTMLResponse)
