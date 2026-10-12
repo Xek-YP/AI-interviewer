@@ -15,7 +15,10 @@ from bot.keyboards.payment_keyboard import create_buy_premium_keyboard
 from bot.states.interview import InterviewStates
 from constants.subscription import TEXT_ONLY_HINT
 from database.session import AsyncSessionLocal
-from exceptions import InterviewLimitExceededError, InvalidInterviewRequestError
+from exceptions import (
+    InterviewLimitExceededError,
+    InvalidInterviewRequestError,
+)
 from services.interview_service import interview_service
 from services.subscription_service import subscription_service
 from services.user_service import user_service
@@ -178,7 +181,7 @@ async def difficulty_handler(
                 difficulty=difficulty,
                 position=position,
                 requirements=requirements,
-                max_questions=5,
+                max_questions=11,
             )
     except InvalidInterviewRequestError as e:
         await state.clear()
