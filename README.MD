@@ -98,10 +98,11 @@ PostgreSQL.
 Telegram Bot Token.
 API-ключ используемого LLM-провайдера.
 Установка
->>>>>>> 7f18ea238884c4ccf5f81f25f28c2e6ede911788
+```bash
 git clone <repository-url>
 cd AI-interviewer
-
+```
+```bash
 python -m venv .venv
 ```
 
